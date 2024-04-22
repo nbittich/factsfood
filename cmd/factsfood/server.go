@@ -3,9 +3,11 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"github.com/labstack/echo/v4"
-	"github.com/nbittich/factsfood/config"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"github.com/nbittich/factsfood/config"
 )
 
 //go:embed banner.txt
@@ -13,8 +15,18 @@ var BANNER string
 
 func main() {
 	e := echo.New()
+	// middleware
+	e.Pre(middleware.AddTrailingSlash())
+
+	if config.GoEnv == config.DEVELOPMENT {
+		e.Use(middleware.CORS())
+	}
+
 	e.HideBanner = true
-	fmt.Println(BANNER)
+	e.Logger.SetLevel(config.LogLevel)
+	e.Use(middleware.Logger())
+	println(BANNER)
+
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")
 	})
