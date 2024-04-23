@@ -1,5 +1,11 @@
 package views
 
+import "github.com/nbittich/factsfood/views/layout"
+
 templ Home(name string) {
+	@layout.Layout("Home", home(name))
+}
+
+templ home(name string) {
 	<div>Hello { name }!</div>
 }

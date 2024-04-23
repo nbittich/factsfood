@@ -15,6 +15,10 @@ var BANNER string
 
 func main() {
 	e := echo.New()
+
+	// static assets
+	e.Static("/assets", "assets")
+
 	// middleware
 	e.Pre(middleware.AddTrailingSlash())
 
