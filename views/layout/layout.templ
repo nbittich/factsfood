@@ -2,7 +2,7 @@ package layout
 
 templ Layout(title string, body templ.Component) {
 	<!DOCTYPE html>
-	<html lang="en" data-bs-theme="dark">
+	<html lang="en" data-bs-theme="light">
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -10,9 +10,57 @@ templ Layout(title string, body templ.Component) {
 				{ title }
 			</title>
 			<link href="/assets/css/bootstrap.min.css" rel="stylesheet"/>
+			<link rel="stylesheet" href="/assets/css/bootstrap-icon.min.css"/>
 		</head>
 		<body>
-			@body
+			<div class="container-fluid">
+				<div class="row">
+					<div class="col-sm-auto sticky-top  bg-body-tertiary ps-0 pe-0 m-0 shadow">
+						<div class="d-flex flex-sm-column flex-row flex-nowrap bg-body-tertiary">
+							<a
+								href="/"
+								class="d-block p-3 link-body-emphasis text-decoration-none"
+								title=""
+								data-bs-toggle="tooltip"
+								data-bs-placement="right"
+								data-bs-original-title="Icon-only"
+							>
+								<i class="bi-bootstrap fs-1"></i>
+							</a>
+							<ul class="nav nav-pills nav-flush flex-sm-column flex-row flex-nowrap mb-auto  text-center ">
+								<li class="nav-item">
+									<a href="#" class="nav-link py-3 px-2 rounded-0" title="" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-original-title="Home">
+										<i class="bi-house fs-1"></i>
+									</a>
+								</li>
+								<li class="nav-item">
+									<a href="#" class="nav-link py-3 px-2  rounded-0" title="" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-original-title="Dashboard">
+										<i class="bi-speedometer2 fs-1"></i>
+									</a>
+								</li>
+								<li class="nav-item">
+									<a href="#" class="nav-link py-3 px-2  rounded-0" title="" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-original-title="Orders">
+										<i class="bi-table fs-1"></i>
+									</a>
+								</li>
+								<li class="nav-item ">
+									<a href="#" class="nav-link active py-3  px-2  rounded-0" title="" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-original-title="Products">
+										<i class="bi-heart fs-1"></i>
+									</a>
+								</li>
+								<li class="nav-item">
+									<a href="#" class="nav-link py-3 px-2  rounded-0" title="" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-original-title="Customers">
+										<i class="bi-people fs-1"></i>
+									</a>
+								</li>
+							</ul>
+						</div>
+					</div>
+					<div class="col-sm p-3   min-vh-100">
+						@body
+					</div>
+				</div>
+			</div>
 			<script src="/assets/js/bootstrap.min.js"></script>
 		</body>
 	</html>
