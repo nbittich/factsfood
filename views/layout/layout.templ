@@ -1,6 +1,6 @@
 package layout
 
-templ Layout(title string, body templ.Component, extraCss templ.Component, extraJs templ.Component) {
+templ Layout(title string, href string, body templ.Component, extraCss templ.Component, extraJs templ.Component) {
 	<!DOCTYPE html>
 	<html lang="en" data-bs-theme="light">
 		<head>
@@ -19,7 +19,7 @@ templ Layout(title string, body templ.Component, extraCss templ.Component, extra
 			<div class="container-fluid">
 				<div class="row">
 					<div class="col-sm-auto sticky-top  bg-body-tertiary ps-0 pe-0 m-0 shadow">
-						@sidebar()
+						@sidebar(href)
 					</div>
 					<div class="col-sm p-3   min-vh-100">
 						@body

@@ -1,48 +1,42 @@
 package layout
 
 type MenuLink struct {
-	href   string
-	icon   string
-	title  string
-	active bool
+	href  string
+	icon  string
+	title string
 }
 
-var menuLinks []MenuLink = []MenuLink{
+var menuLinks = [...]MenuLink{
 	{
 		"/",
 		"bi-house",
 		"Home",
-		true,
 	},
 	{
-		"/",
+		"/dashboard",
 		"bi-speedometer2",
 		"Dashboard",
-		false,
 	},
 	{
-		"/",
+		"/orders",
 		"bi-table",
 		"Orders",
-		false,
 	},
 	{
-		"/",
+		"/products",
 		"bi-heart",
 		"Products",
-		false,
 	},
 	{
-		"/",
+		"/customers",
 		"bi-people",
 		"Customers",
-		false,
 	},
 }
 
-templ sidebar() {
-	<div class="d-flex flex-sm-column flex-row flex-nowrap">
-		<a
+templ sidebar(currentHref string) {
+	<div class="d-flex flex-sm-column flex-row justify-content-center flex-nowrap">
+		/* <a
 			href="/"
 			class="d-block p-3 link-body-emphasis text-decoration-none"
 			title=""
@@ -51,13 +45,13 @@ templ sidebar() {
 			data-bs-original-title="Icon-only"
 		>
 			<i class="bi-bootstrap fs-1"></i>
-		</a>
-		<ul class="nav nav-pills nav-flush flex-sm-column flex-row flex-nowrap mb-auto  text-center ">
+		</a>*/
+		<ul class="nav nav-pills nav-flush flex-sm-column flex-row flex-nowrap mb-auto  text-center  ">
 			for _,link:= range menuLinks {
 				<li class="nav-item">
 					<a
 						href={ templ.URL(link.href) }
-						class={ "nav-link py-3 px-2  rounded-0", templ.KV("active", link.active) }
+						class={ "nav-link py-3 px-2  rounded-0", templ.KV("active", currentHref == link.href) }
 						title={ link.title }
 						data-bs-toggle="tooltip"
 						data-bs-placement="right"
