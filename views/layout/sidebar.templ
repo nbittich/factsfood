@@ -1,5 +1,45 @@
 package layout
 
+type MenuLink struct {
+	href   string
+	icon   string
+	title  string
+	active bool
+}
+
+var menuLinks []MenuLink = []MenuLink{
+	{
+		"/",
+		"bi-house",
+		"Home",
+		true,
+	},
+	{
+		"/",
+		"bi-speedometer2",
+		"Dashboard",
+		false,
+	},
+	{
+		"/",
+		"bi-table",
+		"Orders",
+		false,
+	},
+	{
+		"/",
+		"bi-heart",
+		"Products",
+		false,
+	},
+	{
+		"/",
+		"bi-people",
+		"Customers",
+		false,
+	},
+}
+
 templ sidebar() {
 	<div class="d-flex flex-sm-column flex-row flex-nowrap">
 		<a
@@ -13,31 +53,20 @@ templ sidebar() {
 			<i class="bi-bootstrap fs-1"></i>
 		</a>
 		<ul class="nav nav-pills nav-flush flex-sm-column flex-row flex-nowrap mb-auto  text-center ">
-			<li class="nav-item">
-				<a href="#" class="nav-link py-3 px-2 rounded-0" title="" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-original-title="Home">
-					<i class="bi-house fs-1"></i>
-				</a>
-			</li>
-			<li class="nav-item">
-				<a href="#" class="nav-link py-3 px-2  rounded-0" title="" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-original-title="Dashboard">
-					<i class="bi-speedometer2 fs-1"></i>
-				</a>
-			</li>
-			<li class="nav-item">
-				<a href="#" class="nav-link py-3 px-2  rounded-0" title="" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-original-title="Orders">
-					<i class="bi-table fs-1"></i>
-				</a>
-			</li>
-			<li class="nav-item ">
-				<a href="#" class="nav-link active py-3  px-2  rounded-0" title="" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-original-title="Products">
-					<i class="bi-heart fs-1"></i>
-				</a>
-			</li>
-			<li class="nav-item">
-				<a href="#" class="nav-link py-3 px-2  rounded-0" title="" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-original-title="Customers">
-					<i class="bi-people fs-1"></i>
-				</a>
-			</li>
+			for _,link:= range menuLinks {
+				<li class="nav-item">
+					<a
+						href={ templ.URL(link.href) }
+						class={ "nav-link py-3 px-2  rounded-0", templ.KV("active", link.active) }
+						title={ link.title }
+						data-bs-toggle="tooltip"
+						data-bs-placement="right"
+						data-bs-original-title={ link.title }
+					>
+						<i class={ link.icon, "fs-1" }></i>
+					</a>
+				</li>
+			}
 		</ul>
 	</div>
 }
