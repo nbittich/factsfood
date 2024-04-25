@@ -1,6 +1,6 @@
 package layout
 
-templ Layout(title string, body templ.Component) {
+templ Layout(title string, body templ.Component, extraCss templ.Component, extraJs templ.Component) {
 	<!DOCTYPE html>
 	<html lang="en" data-bs-theme="light">
 		<head>
@@ -11,6 +11,9 @@ templ Layout(title string, body templ.Component) {
 			</title>
 			<link href="/assets/css/bootstrap.min.css" rel="stylesheet"/>
 			<link rel="stylesheet" href="/assets/css/bootstrap-icon.min.css"/>
+			if extraCss != nil {
+				@extraCss
+			}
 		</head>
 		<body>
 			<div class="container-fluid">
@@ -62,6 +65,9 @@ templ Layout(title string, body templ.Component) {
 				</div>
 			</div>
 			<script src="/assets/js/bootstrap.min.js"></script>
+			if extraJs != nil {
+				@extraJs
+			}
 		</body>
 	</html>
 }

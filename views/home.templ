@@ -3,7 +3,7 @@ package views
 import "github.com/nbittich/factsfood/views/layout"
 
 templ Home(name string) {
-	@layout.Layout("Home", home(name))
+	@layout.Layout("Home", home(name), nil, nil)
 }
 
 templ home(name string) {
