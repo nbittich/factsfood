@@ -2,8 +2,6 @@ module github.com/nbittich/factsfood
 
 go 1.22.2
 
-require github.com/BurntSushi/toml v1.3.2
-
 require (
 	github.com/a-h/templ v0.2.663 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
@@ -19,4 +17,5 @@ require (
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
+	github.com/BurntSushi/toml v1.3.2
 )
