@@ -1,11 +1,14 @@
 package views
 
-import "github.com/nbittich/factsfood/views/layout"
+import (
+	"github.com/nbittich/factsfood/views/layout"
+	"github.com/nbittich/factsfood/views/utils"
+)
 
 templ Home(name string) {
-	@layout.Layout("Home", "/", home(name), nil, nil)
+	@layout.Layout("home.title", "/", home(name), nil, nil)
 }
 
 templ home(name string) {
-	<div>Hello { name }!</div>
+	<div>{ utils.T(ctx,"home.hello") } { utils.T(ctx, name) }!</div>
 }

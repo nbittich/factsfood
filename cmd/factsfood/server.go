@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/handlers"
+	ffMidleware "github.com/nbittich/factsfood/middleware"
 )
 
 //go:embed banner.txt
@@ -26,6 +27,7 @@ func main() {
 		e.Use(middleware.CORS())
 	}
 
+	e.Use(ffMidleware.I18n)
 	e.HideBanner = true
 	e.Logger.SetLevel(config.LogLevel)
 	e.Use(middleware.Logger())

@@ -10,7 +10,7 @@ import (
 func HomeHandler(c echo.Context) error {
 	name := c.QueryParam("name")
 	if name == "" {
-		name = "World"
+		name = "home.world"
 	}
 	return renderHTML(http.StatusOK, c, views.Home(name))
 }

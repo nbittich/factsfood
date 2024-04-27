@@ -1,5 +1,9 @@
 package layout
 
+import (
+	"github.com/nbittich/factsfood/views/utils"
+)
+
 templ Layout(title string, href string, body templ.Component, extraCss templ.Component, extraJs templ.Component) {
 	<!DOCTYPE html>
 	<html lang="en" data-bs-theme="light">
@@ -7,7 +11,7 @@ templ Layout(title string, href string, body templ.Component, extraCss templ.Com
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>
-				{ title }
+				{ utils.T(ctx,title) }
 			</title>
 			<link href="/assets/css/bootstrap.min.css" rel="stylesheet"/>
 			<link rel="stylesheet" href="/assets/css/bootstrap-icon.min.css"/>
