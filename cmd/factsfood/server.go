@@ -9,6 +9,7 @@ import (
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/handlers"
 	ffMidleware "github.com/nbittich/factsfood/middleware"
+	"github.com/nbittich/factsfood/services/db"
 )
 
 //go:embed banner.txt
@@ -16,7 +17,7 @@ var BANNER string
 
 func main() {
 	e := echo.New()
-
+	defer db.Disconnect()
 	// static assets
 	e.Static("/assets", "assets")
 

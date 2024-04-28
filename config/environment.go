@@ -1,16 +1,26 @@
 package config
 
 import (
-	"github.com/labstack/gommon/log"
+	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/labstack/gommon/log"
 )
 
 var (
-	Host     = loadEnvOrDefault("HOST", "0.0.0.0")
-	Port     = loadEnvOrDefault("PORT", "8080")
-	GoEnv    = env(loadEnvOrDefault("GO_ENV", "development"))
-	LogLevel = logLevel(loadEnvOrDefault("LOG_LEVEL", "INFO"))
+	Host            = loadEnvOrDefault("HOST", "0.0.0.0")
+	Port            = loadEnvOrDefault("PORT", "8080")
+	GoEnv           = env(loadEnvOrDefault("GO_ENV", "development"))
+	LogLevel        = logLevel(loadEnvOrDefault("LOG_LEVEL", "INFO"))
+	MongoHost       = loadEnvOrDefault("MONGO_HOST", "localhost")
+	MongoPort       = loadEnvOrDefault("MONGO_PORT", "27017")
+	MongoUser       = loadEnvOrDefault("MONGO_USER", "root")
+	MongoPassword   = loadEnvOrDefault("MONGO_PASSWORD", "root")
+	MongoDBName     = loadEnvOrDefault("MONGO_DB_NAME", "factsfood")
+	MongoCtxTimeout = time.Duration(loadIntEnvOrDefault("MONGO_CONTEXT_TIMEOUT_SECONDS", 10)) * time.Second
 )
 
 type EnvType uint8
@@ -48,7 +58,15 @@ func logLevel(level string) log.Lvl {
 		lvl = log.INFO
 	}
 	return lvl
+}
 
+func loadIntEnvOrDefault(key string, defaultValue int) int {
+	value := loadEnvOrDefault(key, fmt.Sprint(defaultValue))
+	num, err := strconv.Atoi(value)
+	if err != nil {
+		println("warning! invalid key value (int conversion):", key)
+	}
+	return num
 }
 
 func env(envType string) EnvType {
@@ -64,5 +82,4 @@ func env(envType string) EnvType {
 		return DEVELOPMENT
 
 	}
-
 }
