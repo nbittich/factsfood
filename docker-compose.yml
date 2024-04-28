@@ -1,0 +1,11 @@
+services:
+  ####### MongoDB #######
+  mongo:
+    image: mongo:6
+    networks:
+      factsfood:
+    restart: always
+    volumes:
+      - ./docker/data/db:/data/db
+networks:
+  factsfood:

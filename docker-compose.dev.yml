@@ -1,0 +1,18 @@
+services:
+  mongo-express:
+    image: mongo-express
+    networks:
+      factsfood:
+    restart: always
+    env_file:
+      - ./docker/env-files/dev/express.env
+    ports:
+      - 8081:8081
+  mongo:
+    env_file:
+      - ./docker/env-files/dev/mongo.env
+    ports:
+      - 27017:27017
+
+networks:
+  factsfood:
