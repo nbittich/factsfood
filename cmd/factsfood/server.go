@@ -32,7 +32,7 @@ func main() {
 	e.HideBanner = true
 	e.Logger.SetLevel(config.LogLevel)
 	e.Use(middleware.Logger())
-	println(BANNER)
+	fmt.Println(BANNER)
 
 	e.GET("/", handlers.HomeHandler)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", config.Host, config.Port)))

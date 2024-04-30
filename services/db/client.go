@@ -22,7 +22,7 @@ func init() {
 	if initialized {
 		return
 	}
-	println("connecting to mongo db...")
+	fmt.Println("connecting to mongo db...")
 	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s", config.MongoUser, config.MongoPassword, config.MongoHost, config.MongoPort)
 	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
 	defer cancel()
@@ -58,9 +58,7 @@ func FilterByID(id string) primitive.M {
 	return bson.M{"_id": id}
 }
 
-func InsertOrUpdate(entity types.Identifiable, collectionName string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
-	defer cancel()
+func InsertOrUpdate(ctx context.Context, entity types.Identifiable, collectionName string) (string, error) {
 	collection := GetCollection(collectionName)
 	var err error
 	id := entity.GetID()

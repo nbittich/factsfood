@@ -54,7 +54,7 @@ func logLevel(level string) log.Lvl {
 	case "OFF":
 		lvl = log.OFF
 	default:
-		println("warning! invalid log level:", level)
+		fmt.Println("warning! invalid log level:", level)
 		lvl = log.INFO
 	}
 	return lvl
@@ -64,7 +64,7 @@ func loadIntEnvOrDefault(key string, defaultValue int) int {
 	value := loadEnvOrDefault(key, fmt.Sprint(defaultValue))
 	num, err := strconv.Atoi(value)
 	if err != nil {
-		println("warning! invalid key value (int conversion):", key)
+		fmt.Println("warning! invalid key value (int conversion):", key)
 	}
 	return num
 }
@@ -78,7 +78,7 @@ func env(envType string) EnvType {
 	case "PRODUCTION":
 		return PRODUCTION
 	default:
-		println("warning! invalid env type:", envType)
+		fmt.Println("warning! invalid env type:", envType)
 		return DEVELOPMENT
 
 	}

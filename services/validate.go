@@ -16,7 +16,7 @@ func init() {
 	if initialized {
 		return
 	}
-	Validate = validator.New()
+	Validate = validator.New(validator.WithRequiredStructEnabled())
 	Validate.RegisterValidation("password", validatePassword)
 	initialized = true
 }
