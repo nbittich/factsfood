@@ -2,3 +2,19 @@
 title = "Accueil"
 hello = "Salut"
 world = "le monde"
+
+[home.signin]
+title = "Se connecter"
+
+[home.signup]
+title = "Créer un compte"
+emailHelp = "Nous ne partagerons jamais votre email."
+confirmEmail = "Confirmer Email"
+password = "Mot de passe"
+confirmPassword = "Confirmer mot de passe"
+
+[common]
+email = "Email"
+submit = "Envoyer"
+close = "Fermer"
+username = "Nom d'utilisateur"

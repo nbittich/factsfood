@@ -1,15 +1,15 @@
 package types
 
 type NewUserForm struct {
-	Username        string `json:"username" validate:"required,min=3,max=15"`
-	Password        string `json:"password" validate:"required,min=6,max=30,password"`
-	ConfirmPassword string `json:"confirmPassword" validate:"eqcsfield=Password"`
-	Email           string `json:"email" validate:"required,email"`
-	ConfirmEmail    string `json:"confirmEmail" validate:"eqcsfield=Email"`
+	Username        string `form:"username" json:"username" validate:"required,min=3,max=15"`
+	Password        string `form:"password" json:"password" validate:"required,min=6,max=18,password"`
+	ConfirmPassword string `form:"confirmPassword" json:"confirmPassword" validate:"eqcsfield=Password"`
+	Email           string `form:"email" json:"email" validate:"required,email"`
+	ConfirmEmail    string `form:"confirmEmail" json:"confirmEmail" validate:"eqcsfield=Email"`
 }
 
 type User struct {
-	ID       string      `json:"_id"`
+	ID       string      `bson:"_id" json:"_id"`
 	Username string      `json:"username"`
 	Password string      `json:"password"`
 	Enabled  bool        `json:"enabled"`

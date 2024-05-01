@@ -13,6 +13,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+type ApiError struct {
+	message string
+}
+
 var (
 	DB          *mongo.Client
 	initialized bool
@@ -58,8 +62,22 @@ func FilterByID(id string) primitive.M {
 	return bson.M{"_id": id}
 }
 
-func InsertOrUpdate(ctx context.Context, entity types.Identifiable, collectionName string) (string, error) {
-	collection := GetCollection(collectionName)
+func Exist(ctx context.Context, filter bson.M, collection *mongo.Collection) (bool, error) {
+	res := collection.FindOne(ctx, filter, &options.FindOneOptions{})
+
+	if err := res.Err(); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, nil
+		} else {
+			fmt.Printf("could not call exists, maybe a bug? %s", err)
+			return false, err
+		}
+	}
+
+	return true, nil
+}
+
+func InsertOrUpdate(ctx context.Context, entity types.Identifiable, collection *mongo.Collection) (string, error) {
 	var err error
 	id := entity.GetID()
 	if id == "" {

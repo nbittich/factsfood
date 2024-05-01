@@ -10,5 +10,58 @@ templ Home(name string) {
 }
 
 templ home(name string) {
-	<div>{ utils.T(ctx,"home.hello") } { utils.T(ctx, name) }!</div>
+	<div class="d-flex justify-content-end">
+		<button class="btn btn-info me-1">
+			{ utils.T(ctx,"home.signin.title") }
+		</button>
+		@modalSignUp()
+	</div>
+	<div class="row p-2">{ utils.T(ctx,"home.hello") } { utils.T(ctx, name) }!</div>
+}
+
+templ modalSignUp() {
+	<!-- Button trigger modal -->
+	<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#signUpModal">
+		{ utils.T(ctx,"home.signup.title") }
+	</button>
+	<!-- Modal -->
+	<div class="modal fade" id="signUpModal" tabindex="-1" aria-labelledby="signUpModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h1 class="modal-title fs-5" id="signUpModalLabel">{ utils.T(ctx,"home.signup.title") }</h1>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label={ utils.T(ctx, "common.close") }></button>
+				</div>
+				<div class="modal-body">
+					<form id="signUpForm" method="POST" action="/users/new">
+						<div class="mb-1">
+							<label for="username" class="form-label">{ utils.T(ctx,"common.username") }</label>
+							<input type="text" class="form-control" id="username" name="username" required/>
+						</div>
+						<div class="mb-1">
+							<label for="email" class="form-label">{ utils.T(ctx, "common.email") }</label>
+							<input type="email" class="form-control" id="email" name="email" aria-describedby="emailHelp" required/>
+							<div id="emailHelp" class="form-text">{ utils.T(ctx,"home.signup.emailHelp") }</div>
+						</div>
+						<div class="mb-1">
+							<label for="confirmEmail" class="form-label">{ utils.T(ctx,"home.signup.confirmEmail") }</label>
+							<input type="email" class="form-control" id="confirmEmail" name="confirmEmail" required/>
+						</div>
+						<div class="mb-1">
+							<label for="password" class="form-label">{ utils.T(ctx, "home.signup.password") }</label>
+							<input type="password" class="form-control" id="password" name="password" required/>
+						</div>
+						<div class="mb-1">
+							<label for="confirmPassword" class="form-label">{ utils.T(ctx, "home.signup.confirmPassword") }</label>
+							<input type="password" class="form-control" id="conformPassword" name="confirmPassword" required/>
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{ utils.T(ctx, "common.close") }</button>
+					<button type="submit" class="btn btn-primary" form="signUpForm">{ utils.T(ctx,"common.submit") }</button>
+				</div>
+			</div>
+		</div>
+	</div>
 }

@@ -22,7 +22,7 @@ func main() {
 	e.Static("/assets", "assets")
 
 	// middleware
-	e.Pre(middleware.AddTrailingSlash())
+	// e.Pre(middleware.AddTrailingSlash()) interfer with POST form
 
 	if config.GoEnv == config.DEVELOPMENT {
 		e.Use(middleware.CORS())
@@ -34,6 +34,7 @@ func main() {
 	e.Use(middleware.Logger())
 	fmt.Println(BANNER)
 
-	e.GET("/", handlers.HomeHandler)
+	handlers.UserRouter(e)
+	e.GET("/", handlers.HomeHandler).Name = "home"
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", config.Host, config.Port)))
 }

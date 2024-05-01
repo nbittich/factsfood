@@ -2,3 +2,19 @@
 title = "Home"
 hello = "Hello"
 world = "World"
+
+[home.signin]
+title = "Sign in"
+
+[home.signup]
+title = "Sign up"
+emailHelp = "We'll never share your email with anyone else."
+confirmEmail = "Confirm Email"
+password = "Password"
+confirmPassword = "Confirm Password"
+
+[common]
+email = "Email"
+submit = "Submit"
+close = "Close"
+username = "Username"
