@@ -45,6 +45,7 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 	if err != nil {
 		return nil, err
 	}
+
 	filter := bson.M{
 		"$or": []bson.M{
 			{"email": newUserForm.Email},
@@ -59,7 +60,8 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 	}
 
 	if exist {
-		return nil, types.APIError{Message: "user.exist"}
+		m := types.InvalidMessage{"general": []string{"user.exist"}}
+		return nil, types.InvalidFormError{Messages: m}
 	}
 
 	user := &types.User{

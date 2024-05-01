@@ -13,10 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type ApiError struct {
-	message string
-}
-
 var (
 	DB          *mongo.Client
 	initialized bool
