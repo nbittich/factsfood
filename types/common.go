@@ -6,9 +6,13 @@ type Identifiable interface {
 	GetID() string
 	SetID(id string)
 }
-
+type ErrorMessage struct {
+	Field string `json:"field"`
+	Error string `json:"error"`
+}
 type (
-	InvalidMessage   = map[string]interface{}
+	InvalidMessage []ErrorMessage
+
 	InvalidFormError struct {
 		Messages InvalidMessage `json:"messages"`
 	}

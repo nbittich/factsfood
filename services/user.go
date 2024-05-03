@@ -2,9 +2,7 @@ package services
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/nbittich/factsfood/services/db"
 	"github.com/nbittich/factsfood/types"
 	"go.mongodb.org/mongo-driver/bson"
@@ -26,18 +24,8 @@ func checkPasswordHash(password, hash string) bool {
 func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, error) {
 	collection := db.GetCollection(UserCollection)
 
-	err := Validate.Struct(newUserForm)
+	err := ValidateStruct(newUserForm)
 	if err != nil {
-		if _, ok := err.(*validator.InvalidValidationError); ok {
-			// FIXME should be logged instead
-			fmt.Println(err)
-			return nil, err
-		}
-
-		// FIXME just for testing
-		for _, err := range err.(validator.ValidationErrors) {
-			fmt.Println(err)
-		}
 		return nil, err
 	}
 
@@ -60,7 +48,10 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 	}
 
 	if exist {
-		m := types.InvalidMessage{"general": []string{"user.exist"}}
+		m := types.InvalidMessage{types.ErrorMessage{
+			Field: "general",
+			Error: "user.exist",
+		}}
 		return nil, types.InvalidFormError{Messages: m}
 	}
 
