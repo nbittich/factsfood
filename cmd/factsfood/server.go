@@ -16,11 +16,11 @@ import (
 var BANNER string
 
 func main() {
-	e := echo.New()
 	defer db.Disconnect()
+
+	e := echo.New()
 	// static assets
 	e.Static("/assets", "assets")
-
 	// middleware
 	// e.Pre(middleware.AddTrailingSlash()) interfer with POST form
 
@@ -28,6 +28,7 @@ func main() {
 		e.Use(middleware.CORS())
 	}
 
+	e.Use(middleware.Gzip())
 	e.Use(ffMidleware.I18n)
 	e.HideBanner = true
 	e.Logger.SetLevel(config.LogLevel)

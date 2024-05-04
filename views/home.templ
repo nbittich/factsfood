@@ -7,13 +7,12 @@ import (
 )
 
 var (
-	signUpFormError    types.InvalidFormError
-	signUpForm         types.NewUserForm
-	hasSignUpFormError bool
+	signUpFormError types.InvalidFormError
+	signUpForm      types.NewUserForm
 )
 
 func initValues(ctx context.Context) bool {
-	signUpFormError, hasSignUpFormError = ctx.Value(types.CtxKey("signupFormError")).(types.InvalidFormError)
+	signUpFormError, _ = ctx.Value(types.CtxKey("signupFormError")).(types.InvalidFormError)
 	signUpForm, _ = signUpFormError.Form.(types.NewUserForm)
 
 	return true
@@ -26,7 +25,7 @@ templ Home(name string) {
 }
 
 templ extraJs() {
-	if hasSignUpFormError {
+	if len(signUpFormError.Messages) != 0 {
 		<script>
 				openModal("signUpModal");
 		</script>
