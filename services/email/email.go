@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/nbittich/factsfood/config"
 	"gopkg.in/gomail.v2"
 )
@@ -21,7 +22,8 @@ func init() {
 }
 
 func Send(to []string, bcc []string, subject string, htmlBody string, attach ...string) {
-	MailChan <- fmt.Sprintf("Sending email '%s'...", subject)
+	id := uuid.New()
+	MailChan <- fmt.Sprintf("[%s] Sending email '%s'...", id, subject)
 	m := gomail.NewMessage()
 	m.SetHeader("From", config.SMTPFrom)
 	m.SetHeader("To", to...)
@@ -34,6 +36,6 @@ func Send(to []string, bcc []string, subject string, htmlBody string, attach ...
 	if err := dialer.DialAndSend(m); err != nil {
 		MailChan <- err
 	} else {
-		MailChan <- fmt.Sprintf("mail '%s' sent", subject)
+		MailChan <- fmt.Sprintf("[%s] mail '%s' sent", id, subject)
 	}
 }
