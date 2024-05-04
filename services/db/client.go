@@ -13,15 +13,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var (
-	DB          *mongo.Client
-	initialized bool
-)
+var DB *mongo.Client
 
 func init() {
-	if initialized {
-		return
-	}
 	fmt.Println("connecting to mongo db...")
 	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s", config.MongoUser, config.MongoPassword, config.MongoHost, config.MongoPort)
 	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
@@ -35,13 +29,9 @@ func init() {
 	}
 	fmt.Printf("connected!")
 	DB = client
-	initialized = true
 }
 
 func Disconnect() {
-	if !initialized {
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
 	defer cancel()
 	if err := DB.Disconnect(ctx); err != nil {

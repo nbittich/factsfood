@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/nbittich/factsfood/services/db"
+	"github.com/nbittich/factsfood/services/email"
+	"github.com/nbittich/factsfood/services/utils"
 	"github.com/nbittich/factsfood/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/crypto/bcrypt"
@@ -24,7 +26,7 @@ func checkPasswordHash(password, hash string) bool {
 func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, error) {
 	collection := db.GetCollection(UserCollection)
 
-	err := ValidateStruct(newUserForm)
+	err := utils.ValidateStruct(newUserForm)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +43,6 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 		},
 	}
 
-	// todo
 	exist, err := db.Exist(ctx, filter, collection)
 	if err != nil {
 		return nil, err
@@ -60,5 +61,6 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 	}
 
 	_, err = db.InsertOrUpdate(ctx, user, collection)
+	go email.Send([]string{user.Email}, []string{}, "Activate your account", "<p>Activate your account now!</p>")
 	return user, err
 }

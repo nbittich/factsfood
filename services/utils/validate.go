@@ -1,4 +1,4 @@
-package services
+package utils
 
 import (
 	"regexp"
@@ -8,18 +8,11 @@ import (
 	"github.com/nbittich/factsfood/types"
 )
 
-var (
-	Validate    *validator.Validate
-	initialized bool
-)
+var Validate *validator.Validate
 
 func init() {
-	if initialized {
-		return
-	}
 	Validate = validator.New(validator.WithRequiredStructEnabled())
 	Validate.RegisterValidation("password", validatePassword)
-	initialized = true
 }
 
 func ValidateStruct(s interface{}) error {

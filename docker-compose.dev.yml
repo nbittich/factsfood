@@ -13,6 +13,11 @@ services:
       - ./docker/env-files/dev/mongo.env
     ports:
       - 27017:27017
+  maildev:
+    image: maildev/maildev:2.1.0
+    ports:
+      - 1080:1080
+      - 1025:1025
 
 networks:
   factsfood:

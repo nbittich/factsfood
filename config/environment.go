@@ -15,6 +15,11 @@ var (
 	Port            = loadEnvOrDefault("PORT", "8080")
 	GoEnv           = env(loadEnvOrDefault("GO_ENV", "development"))
 	LogLevel        = logLevel(loadEnvOrDefault("LOG_LEVEL", "INFO"))
+	SMTPHost        = loadEnvOrDefault("SMTP_HOST", "localhost")
+	SMTPPort        = loadIntEnvOrDefault("SMTP_PORT", 1025)
+	SMTPFrom        = loadEnvOrDefault("SMTP_FROM", "test@localhost")
+	SMTPPassword    = loadEnvOrDefault("SMTP_PASSWORD", "")
+	SMTPSSL         = loadBoolOrDefault("SMTP_SSL", false)
 	MongoHost       = loadEnvOrDefault("MONGO_HOST", "localhost")
 	MongoPort       = loadEnvOrDefault("MONGO_PORT", "27017")
 	MongoUser       = loadEnvOrDefault("MONGO_USER", "root")
@@ -60,11 +65,22 @@ func logLevel(level string) log.Lvl {
 	return lvl
 }
 
+func loadBoolOrDefault(key string, defaultValue bool) bool {
+	value := loadEnvOrDefault(key, fmt.Sprint(defaultValue))
+	b, err := strconv.ParseBool(value)
+	if err != nil {
+		fmt.Println("warning! invalid key value (bool conversion):", key)
+		return defaultValue
+	}
+	return b
+}
+
 func loadIntEnvOrDefault(key string, defaultValue int) int {
 	value := loadEnvOrDefault(key, fmt.Sprint(defaultValue))
 	num, err := strconv.Atoi(value)
 	if err != nil {
 		fmt.Println("warning! invalid key value (int conversion):", key)
+		return defaultValue
 	}
 	return num
 }
