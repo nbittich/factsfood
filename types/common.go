@@ -7,9 +7,14 @@ type Identifiable interface {
 	SetID(id string)
 }
 
-type CtxKey string
+const (
+	I18nKey            = CtxKey("localizer")
+	LangKey            = CtxKey("lang")
+	SignupFormErrorKey = CtxKey("signupFormError")
+)
 
 type (
+	CtxKey           string
 	InvalidMessage   = map[string]interface{}
 	InvalidFormError struct {
 		Form     interface{}

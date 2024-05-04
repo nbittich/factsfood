@@ -19,16 +19,20 @@ func init() {
 	bundle.LoadMessageFile("i18n/en.toml")
 }
 
-const I18nCtxKey = types.CtxKey("localizer")
-
 func I18n(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		r := c.Request()
 		lang := r.FormValue("lang")
 		accept := r.Header.Get("Accept-Language")
+		ctx := r.Context()
+		if lang != "" {
+			ctx = context.WithValue(ctx, types.LangKey, lang)
+		} else {
+			ctx = context.WithValue(ctx, types.LangKey, lang)
+		}
 
 		localizer := i18n.NewLocalizer(bundle, lang, accept)
-		c.SetRequest(r.WithContext(context.WithValue(r.Context(), I18nCtxKey, localizer)))
+		c.SetRequest(r.WithContext(context.WithValue(ctx, types.I18nKey, localizer)))
 		return next(c)
 	}
 }

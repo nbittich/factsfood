@@ -6,25 +6,19 @@ import (
 	"github.com/nbittich/factsfood/types"
 )
 
-var (
-	signUpFormError types.InvalidFormError
-	signUpForm      types.NewUserForm
-)
-
-func initValues(ctx context.Context) bool {
-	signUpFormError, _ = ctx.Value(types.CtxKey("signupFormError")).(types.InvalidFormError)
-	signUpForm, _ = signUpFormError.Form.(types.NewUserForm)
-
-	return true
+func initValues(ctx context.Context) (types.InvalidFormError, types.NewUserForm, bool) {
+	signUpFormError, _ := ctx.Value(types.SignupFormErrorKey).(types.InvalidFormError)
+	signUpForm, _ := signUpFormError.Form.(types.NewUserForm)
+	return signUpFormError, signUpForm, true
 }
 
 templ Home(name string) {
-	if initValues(ctx) {
-		@layout.Layout("home.title", "/", home(name), nil, extraJs())
+	if signUpFormError, signUpForm,ok:=initValues(ctx); ok {
+		@layout.Layout("home.title", "/", home(name, signUpFormError, signUpForm), nil, extraJs(signUpFormError))
 	}
 }
 
-templ extraJs() {
+templ extraJs(signUpFormError types.InvalidFormError) {
 	if len(signUpFormError.Messages) != 0 {
 		<script>
 				openModal("signUpModal");
@@ -32,17 +26,17 @@ templ extraJs() {
 	}
 }
 
-templ home(name string) {
+templ home(name string, signUpFormError types.InvalidFormError, signUpForm types.NewUserForm) {
 	<div class="d-flex justify-content-end">
 		<button class="btn btn-info me-1">
 			{ utils.T(ctx,"home.signin.title") }
 		</button>
-		@modalSignUp()
+		@modalSignUp(signUpFormError, signUpForm)
 	</div>
 	<div class="row p-2">{ utils.T(ctx,"home.hello") } { utils.T(ctx, name) }!</div>
 }
 
-templ modalSignUp() {
+templ modalSignUp(signUpFormError types.InvalidFormError, signUpForm types.NewUserForm) {
 	<!-- Button trigger modal -->
 	<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#signUpModal">
 		{ utils.T(ctx,"home.signup.title") }
@@ -56,7 +50,7 @@ templ modalSignUp() {
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label={ utils.T(ctx, "common.close") }></button>
 				</div>
 				<div class="modal-body">
-					<form id="signUpForm" method="POST" action="/users/new" onsubmit="return onSubmitForm()">
+					<form id="signUpForm" method="POST" action={ templ.URL("/users/new?lang=" + utils.GetLang(ctx)) } onsubmit="return onSubmitForm()">
 						<div class="mb-1">
 							<label for="username" class="form-label">{ utils.T(ctx,"common.username") }</label>
 							<input

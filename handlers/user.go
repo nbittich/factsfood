@@ -32,7 +32,7 @@ func newUserHandler(c echo.Context) error {
 			if accept == echo.MIMEApplicationJSON {
 				return c.JSON(http.StatusBadRequest, err)
 			} else {
-				c.SetRequest(request.WithContext(context.WithValue(request.Context(), types.CtxKey("signupFormError"), err)))
+				c.SetRequest(request.WithContext(context.WithValue(request.Context(), types.SignupFormErrorKey, err)))
 				return renderHTML(http.StatusOK, c, views.Home("Home"))
 			}
 		}
