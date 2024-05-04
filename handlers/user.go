@@ -22,6 +22,7 @@ func newUserHandler(c echo.Context) error {
 	if err := c.Bind(&newUserForm); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+
 	c.Logger().Debug(newUserForm)
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()

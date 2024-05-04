@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -19,20 +20,32 @@ func main() {
 	defer db.Disconnect()
 
 	e := echo.New()
+
 	// static assets
 	e.Static("/assets", "assets")
+
 	// middleware
 	// e.Pre(middleware.AddTrailingSlash()) interfer with POST form
 
 	if config.GoEnv == config.DEVELOPMENT {
 		e.Use(middleware.CORS())
 	}
-
+	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
+		TokenLookup: "form:csrf",
+		Skipper: func(c echo.Context) bool {
+			return strings.Contains(c.Path(), "assets")
+		},
+	}))
 	e.Use(middleware.Gzip())
 	e.Use(ffMidleware.I18n)
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+
+	// end middleware
+
 	e.HideBanner = true
 	e.Logger.SetLevel(config.LogLevel)
-	e.Use(middleware.Logger())
+
 	fmt.Println(BANNER)
 
 	handlers.UserRouter(e)

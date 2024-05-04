@@ -10,6 +10,7 @@ type Identifiable interface {
 const (
 	I18nKey            = CtxKey("localizer")
 	LangKey            = CtxKey("lang")
+	CsrfKey            = CtxKey("csrf")
 	SignupFormErrorKey = CtxKey("signupFormError")
 )
 

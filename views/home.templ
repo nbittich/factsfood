@@ -51,6 +51,7 @@ templ modalSignUp(signUpFormError types.InvalidFormError, signUpForm types.NewUs
 				</div>
 				<div class="modal-body">
 					<form id="signUpForm" method="POST" action={ templ.URL("/users/new?lang=" + utils.GetLang(ctx)) } onsubmit="return onSubmitForm()">
+						<input type="hidden" name="csrf" value={ ctx.Value(types.CsrfKey).(string) }/>
 						<div class="mb-1">
 							<label for="username" class="form-label">{ utils.T(ctx,"common.username") }</label>
 							<input
@@ -106,7 +107,7 @@ templ modalSignUp(signUpFormError types.InvalidFormError, signUpForm types.NewUs
 							<input
 								type="password"
 								class={ "form-control", templ.KV("is-invalid",signUpFormError.Messages["confirmPassword"]!=nil ) }
-								id="conformPassword"
+								id="confirmPassword"
 								name="confirmPassword"
 								value={ signUpForm.ConfirmPassword }
 								required
