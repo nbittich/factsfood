@@ -30,9 +30,9 @@ func ValidateStruct(s interface{}) error {
 		}
 
 		validationErrors := err.(validator.ValidationErrors)
-		errors := make(types.InvalidMessage, len(validationErrors))
+		errors := make(types.InvalidMessage, len(validationErrors)+1)
 		for _, err := range validationErrors {
-			errors[err.Field()] = err.Tag()
+			errors[strings.ToLower(err.Field()[0:1])+err.Field()[1:]] = err.Tag()
 		}
 		return types.InvalidFormError{Messages: errors}
 	}

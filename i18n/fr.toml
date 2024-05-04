@@ -12,9 +12,11 @@ emailHelp = "Nous ne partagerons jamais votre email."
 confirmEmail = "Confirmer Email"
 password = "Mot de passe"
 confirmPassword = "Confirmer mot de passe"
+user.exist = "Le nom d'utiliasateur existe déjà"
 
 [common]
 email = "Email"
 submit = "Envoyer"
 close = "Fermer"
 username = "Nom d'utilisateur"
+invalid = "invalide"

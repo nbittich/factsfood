@@ -5,6 +5,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/labstack/echo/v4"
+	"github.com/nbittich/factsfood/types"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 )
@@ -18,9 +19,7 @@ func init() {
 	bundle.LoadMessageFile("i18n/en.toml")
 }
 
-type i18nKey string
-
-const I18nCtxKey = i18nKey("localizer")
+const I18nCtxKey = types.CtxKey("localizer")
 
 func I18n(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {

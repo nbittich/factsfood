@@ -3,10 +3,34 @@ package views
 import (
 	"github.com/nbittich/factsfood/views/layout"
 	"github.com/nbittich/factsfood/views/utils"
+	"github.com/nbittich/factsfood/types"
 )
 
+var (
+	signUpFormError    types.InvalidFormError
+	signUpForm         types.NewUserForm
+	hasSignUpFormError bool
+)
+
+func initValues(ctx context.Context) bool {
+	signUpFormError, hasSignUpFormError = ctx.Value(types.CtxKey("signupFormError")).(types.InvalidFormError)
+	signUpForm, _ = signUpFormError.Form.(types.NewUserForm)
+
+	return true
+}
+
 templ Home(name string) {
-	@layout.Layout("home.title", "/", home(name), nil, nil)
+	if initValues(ctx) {
+		@layout.Layout("home.title", "/", home(name), nil, extraJs())
+	}
+}
+
+templ extraJs() {
+	if hasSignUpFormError {
+		<script>
+				openModal("signUpModal");
+		</script>
+	}
 }
 
 templ home(name string) {
@@ -33,33 +57,77 @@ templ modalSignUp() {
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label={ utils.T(ctx, "common.close") }></button>
 				</div>
 				<div class="modal-body">
-					<form id="signUpForm" method="POST" action="/users/new">
+					<form id="signUpForm" method="POST" action="/users/new" onsubmit="return onSubmitForm()">
 						<div class="mb-1">
 							<label for="username" class="form-label">{ utils.T(ctx,"common.username") }</label>
-							<input type="text" class="form-control" id="username" name="username" required/>
+							<input
+								type="text"
+								class={ "form-control", templ.KV("is-invalid",signUpFormError.Messages["username"] !=nil) }
+								id="username"
+								name="username"
+								value={ signUpForm.Username }
+								required
+							/>
+							<div class="invalid-feedback">{ utils.T(ctx,"common.username") } { utils.T(ctx,"common.invalid") } </div>
 						</div>
 						<div class="mb-1">
 							<label for="email" class="form-label">{ utils.T(ctx, "common.email") }</label>
-							<input type="email" class="form-control" id="email" name="email" aria-describedby="emailHelp" required/>
+							<input
+								type="email"
+								class={ "form-control", templ.KV("is-invalid",signUpFormError.Messages["email"] !=nil) }
+								id="email"
+								name="email"
+								aria-describedby="emailHelp"
+								value={ signUpForm.Email }
+								required
+							/>
+							<div class="invalid-feedback">{ utils.T(ctx,"common.email") } { utils.T(ctx,"common.invalid") } </div>
 							<div id="emailHelp" class="form-text">{ utils.T(ctx,"home.signup.emailHelp") }</div>
 						</div>
 						<div class="mb-1">
 							<label for="confirmEmail" class="form-label">{ utils.T(ctx,"home.signup.confirmEmail") }</label>
-							<input type="email" class="form-control" id="confirmEmail" name="confirmEmail" required/>
+							<input
+								type="email"
+								class={ "form-control", templ.KV("is-invalid",signUpFormError.Messages["confirmEmail"]!=nil ) }
+								id="confirmEmail"
+								name="confirmEmail"
+								value={ signUpForm.ConfirmEmail }
+								required
+							/>
+							<div id="invalidConfirmEmail" class="invalid-feedback">{ utils.T(ctx,"home.signup.confirmEmail") } { utils.T(ctx,"common.invalid") } </div>
 						</div>
 						<div class="mb-1">
 							<label for="password" class="form-label">{ utils.T(ctx, "home.signup.password") }</label>
-							<input type="password" class="form-control" id="password" name="password" required/>
+							<input
+								type="password"
+								id="password"
+								name="password"
+								value={ signUpForm.Password }
+								class={ "form-control", templ.KV("is-invalid",signUpFormError.Messages["password"]!=nil ) }
+								required
+							/>
+							<div class="invalid-feedback">{ utils.T(ctx,"home.signup.password") } { utils.T(ctx,"common.invalid") } </div>
 						</div>
 						<div class="mb-1">
 							<label for="confirmPassword" class="form-label">{ utils.T(ctx, "home.signup.confirmPassword") }</label>
-							<input type="password" class="form-control" id="conformPassword" name="confirmPassword" required/>
+							<input
+								type="password"
+								class={ "form-control", templ.KV("is-invalid",signUpFormError.Messages["confirmPassword"]!=nil ) }
+								id="conformPassword"
+								name="confirmPassword"
+								value={ signUpForm.ConfirmPassword }
+								required
+							/>
+							<div class="invalid-feedback">{ utils.T(ctx,"home.signup.confirmPassword") } { utils.T(ctx,"common.invalid") } </div>
 						</div>
+						if err:= signUpFormError.Messages["general"];err!=nil {
+							<div class="mb-1"><p class="text-danger">{ utils.T(ctx,err.(string)) }</p></div>
+						}
 					</form>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{ utils.T(ctx, "common.close") }</button>
-					<button type="submit" class="btn btn-primary" form="signUpForm">{ utils.T(ctx,"common.submit") }</button>
+					<button id="signupSubmitBtn" type="submit" class="btn btn-primary" form="signUpForm">{ utils.T(ctx,"common.submit") }</button>
 				</div>
 			</div>
 		</div>

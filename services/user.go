@@ -48,8 +48,8 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 	}
 
 	if exist {
-		m := types.InvalidMessage{"general": []string{"user.exist"}}
-		return nil, types.InvalidFormError{Messages: m}
+		m := types.InvalidMessage{"general": "home.signup.user.exist"}
+		return nil, types.InvalidFormError{Form: newUserForm, Messages: m}
 	}
 
 	user := &types.User{

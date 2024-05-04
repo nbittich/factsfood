@@ -7,9 +7,12 @@ type Identifiable interface {
 	SetID(id string)
 }
 
+type CtxKey string
+
 type (
 	InvalidMessage   = map[string]interface{}
 	InvalidFormError struct {
+		Form     interface{}
 		Messages InvalidMessage `json:"messages"`
 	}
 )
