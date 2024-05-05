@@ -63,14 +63,14 @@ func Exist(ctx context.Context, filter bson.M, collection *mongo.Collection) (bo
 	return true, nil
 }
 
-func FindOneBy[T any](ctx context.Context, filter bson.M, collection *mongo.Collection) (T, error) {
+func FindOneBy[T types.HasID](ctx context.Context, filter bson.M, collection *mongo.Collection) (T, error) {
 	ptr := new(T)
 	res := collection.FindOne(ctx, filter, &options.FindOneOptions{})
 	err := res.Decode(ptr)
 	return *ptr, err
 }
 
-func FindOneByID[T any](ctx context.Context, collection *mongo.Collection, id string) (T, error) {
+func FindOneByID[T types.HasID](ctx context.Context, collection *mongo.Collection, id string) (T, error) {
 	return FindOneBy[T](ctx, FilterByID(id), collection)
 }
 

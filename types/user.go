@@ -39,7 +39,7 @@ type UserSetting struct {
 	Lang string `json:"lang"`
 }
 
-func (user *User) GetID() string {
+func (user User) GetID() string {
 	return user.ID
 }
 
@@ -47,7 +47,7 @@ func (user *User) SetID(id string) {
 	user.ID = id
 }
 
-func (userActivationURL *UserActivationURL) GetID() string {
+func (userActivationURL UserActivationURL) GetID() string {
 	return userActivationURL.ID
 }
 

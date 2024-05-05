@@ -2,8 +2,11 @@ package types
 
 import "encoding/json"
 
-type Identifiable interface {
+type HasID interface {
 	GetID() string
+}
+type Identifiable interface {
+	HasID
 	SetID(id string)
 }
 
