@@ -11,21 +11,23 @@ import (
 )
 
 var (
-	Host            = loadEnvOrDefault("HOST", "0.0.0.0")
-	Port            = loadEnvOrDefault("PORT", "8080")
-	GoEnv           = env(loadEnvOrDefault("GO_ENV", "development"))
-	LogLevel        = logLevel(loadEnvOrDefault("LOG_LEVEL", "INFO"))
-	SMTPHost        = loadEnvOrDefault("SMTP_HOST", "localhost")
-	SMTPPort        = loadIntEnvOrDefault("SMTP_PORT", 1025)
-	SMTPFrom        = loadEnvOrDefault("SMTP_FROM", "test@localhost")
-	SMTPPassword    = loadEnvOrDefault("SMTP_PASSWORD", "")
-	SMTPSSL         = loadBoolOrDefault("SMTP_SSL", false)
-	MongoHost       = loadEnvOrDefault("MONGO_HOST", "localhost")
-	MongoPort       = loadEnvOrDefault("MONGO_PORT", "27017")
-	MongoUser       = loadEnvOrDefault("MONGO_USER", "root")
-	MongoPassword   = loadEnvOrDefault("MONGO_PASSWORD", "root")
-	MongoDBName     = loadEnvOrDefault("MONGO_DB_NAME", "factsfood")
-	MongoCtxTimeout = time.Duration(loadIntEnvOrDefault("MONGO_CONTEXT_TIMEOUT_SECONDS", 10)) * time.Second
+	Host                 = loadEnvOrDefault("HOST", "0.0.0.0")
+	Port                 = loadEnvOrDefault("PORT", "8080")
+	BaseURL              = loadEnvOrDefault("BASE_URL", fmt.Sprintf("http://%s:%s", Host, Port))
+	GoEnv                = env(loadEnvOrDefault("GO_ENV", "development"))
+	LogLevel             = logLevel(loadEnvOrDefault("LOG_LEVEL", "INFO"))
+	SMTPHost             = loadEnvOrDefault("SMTP_HOST", "localhost")
+	SMTPPort             = loadIntEnvOrDefault("SMTP_PORT", 1025)
+	SMTPFrom             = loadEnvOrDefault("SMTP_FROM", "test@localhost")
+	SMTPPassword         = loadEnvOrDefault("SMTP_PASSWORD", "")
+	SMTPSSL              = loadBoolOrDefault("SMTP_SSL", false)
+	MongoHost            = loadEnvOrDefault("MONGO_HOST", "localhost")
+	MongoPort            = loadEnvOrDefault("MONGO_PORT", "27017")
+	MongoUser            = loadEnvOrDefault("MONGO_USER", "root")
+	MongoPassword        = loadEnvOrDefault("MONGO_PASSWORD", "root")
+	MongoDBName          = loadEnvOrDefault("MONGO_DB_NAME", "factsfood")
+	MongoCtxTimeout      = time.Duration(loadIntEnvOrDefault("MONGO_CONTEXT_TIMEOUT_SECONDS", 10)) * time.Second
+	ActivationExpiration = time.Duration(loadIntEnvOrDefault("ACTIVATION_EXPIRATION", 10)) * time.Minute
 )
 
 type EnvType uint8

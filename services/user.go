@@ -2,7 +2,11 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"time"
 
+	"github.com/google/uuid"
+	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/services/db"
 	"github.com/nbittich/factsfood/services/email"
 	"github.com/nbittich/factsfood/services/utils"
@@ -11,7 +15,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const UserCollection = "user"
+const (
+	UserCollection              = "user"
+	UserActivationURlCollection = "userActivationUrl"
+)
 
 func hashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
@@ -25,7 +32,6 @@ func checkPasswordHash(password, hash string) bool {
 
 func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, error) {
 	collection := db.GetCollection(UserCollection)
-
 	err := utils.ValidateStruct(newUserForm)
 	if err != nil {
 		return nil, err
@@ -60,7 +66,50 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 		Enabled:  false, // FIXME should send an email
 	}
 
-	_, err = db.InsertOrUpdate(ctx, user, collection)
-	go email.Send([]string{user.Email}, []string{}, "Activate your account", "<p>Activate your account now!</p>")
-	return user, err
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
+		defer cancel()
+		// we can create user here, no need to be synchronous
+		_, e := db.InsertOrUpdate(ctx, user, collection)
+		if e != nil {
+			fmt.Println("could not create user:", e)
+			return
+		}
+		activateURL, e := GenerateActivateURL(ctx, config.BaseURL+"/user/activate", user.ID)
+		if e != nil {
+			fmt.Println("error while generating validation url", err)
+			return
+		}
+		email.SendAsync([]string{user.Email}, []string{}, "Activate your account", fmt.Sprintf(`<a href="%s">Activate your account now!</p>`, activateURL))
+	}()
+	return user, nil
+}
+
+func GenerateActivateURL(ctx context.Context, baseURL string, userID string) (string, error) {
+	userCollection := db.GetCollection(UserCollection)
+	userActivationURLCollection := db.GetCollection(UserActivationURlCollection)
+	user, err := db.FindOneByID[types.User](ctx, userCollection, userID)
+	if err != nil {
+		return "", err
+	}
+	filter := bson.M{
+		"userId": user.ID,
+	}
+	userActivationURL, err := db.FindOneBy[types.UserActivationURL](ctx, filter, userActivationURLCollection)
+	if err != nil {
+		now := time.Now()
+		duration := now.Sub(userActivationURL.UpdatedAt)
+		if duration < config.ActivationExpiration {
+			fmt.Println("activation link still valid")
+			return userActivationURL.GenerateURL(baseURL), nil
+		}
+	}
+	userActivationURL.Hash = uuid.New().String()
+	userActivationURL.UpdatedAt = time.Now()
+	userActivationURL.UserID = userID
+	_, err = db.InsertOrUpdate(ctx, &userActivationURL, userActivationURLCollection)
+	if err != nil {
+		return "", nil
+	}
+	return userActivationURL.GenerateURL(baseURL), nil
 }

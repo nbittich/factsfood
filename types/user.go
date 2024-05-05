@@ -1,5 +1,17 @@
 package types
 
+import (
+	"fmt"
+	"time"
+)
+
+type UserActivationURL struct {
+	ID        string    `bson:"_id" json:"_id"`
+	UserID    string    `json:"userId"`
+	Hash      string    `json:"hash"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
 type NewUserForm struct {
 	Username        string `json:"username" form:"username" validate:"required,min=3,max=15"`
 	Password        string `json:"password" form:"password" validate:"required,min=6,max=18,password"`
@@ -33,4 +45,16 @@ func (user *User) GetID() string {
 
 func (user *User) SetID(id string) {
 	user.ID = id
+}
+
+func (userActivationURL *UserActivationURL) GetID() string {
+	return userActivationURL.ID
+}
+
+func (userActivationURL *UserActivationURL) SetID(id string) {
+	userActivationURL.ID = id
+}
+
+func (user *UserActivationURL) GenerateURL(baseURL string) string {
+	return fmt.Sprintf("%s?activation=%s", baseURL, user.Hash)
 }

@@ -21,7 +21,7 @@ func init() {
 	}
 }
 
-func Send(to []string, bcc []string, subject string, htmlBody string, attach ...string) {
+func SendAsync(to []string, bcc []string, subject string, htmlBody string, attach ...string) {
 	id := uuid.New()
 	MailChan <- fmt.Sprintf("[%s] Sending email '%s'...", id, subject)
 	m := gomail.NewMessage()
