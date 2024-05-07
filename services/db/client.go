@@ -84,7 +84,7 @@ func InsertOrUpdate(ctx context.Context, entity types.Identifiable, collection *
 			return "", err
 		}
 	} else {
-		_, err = collection.UpdateOne(ctx, FilterByID(entity.GetID()), entity, &options.UpdateOptions{})
+		_, err = collection.ReplaceOne(ctx, FilterByID(entity.GetID()), entity, &options.ReplaceOptions{})
 	}
 	return id, err
 }

@@ -26,14 +26,22 @@ templ extraJs(signUpFormError types.InvalidFormError) {
 	}
 }
 
-templ home(name string, signUpFormError types.InvalidFormError, signUpForm types.NewUserForm) {
+templ message() {
+	if m,ok := ctx.Value(types.MessageKey).(types.Message); ok {
+		<div class={ "alert", utils.GetAlertClassKey(m.Type) }>{ utils.T(ctx, m.Message) }</div>
+	}
+}
+
+templ home(_ string, signUpFormError types.InvalidFormError, signUpForm types.NewUserForm) {
 	<div class="d-flex justify-content-end">
 		<button class="btn btn-info me-1">
 			{ utils.T(ctx,"home.signin.title") }
 		</button>
 		@modalSignUp(signUpFormError, signUpForm)
 	</div>
-	<div class="row p-2">{ utils.T(ctx,"home.hello") } { utils.T(ctx, name) }!</div>
+	<div class="row p-2">
+		@message()
+	</div>
 }
 
 templ modalSignUp(signUpFormError types.InvalidFormError, signUpForm types.NewUserForm) {

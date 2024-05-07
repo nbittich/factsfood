@@ -13,6 +13,8 @@ confirmEmail = "Confirmer Email"
 password = "Mot de passe"
 confirmPassword = "Confirmer mot de passe"
 user.exist = "Le nom d'utiliasateur existe déjà"
+user.activated = "L'utilisateur a été activé avec succès"
+user.notActivated = "L'utilisateur n'a pas pu être activé"
 
 [common]
 email = "Email"

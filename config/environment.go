@@ -27,7 +27,7 @@ var (
 	MongoPassword        = loadEnvOrDefault("MONGO_PASSWORD", "root")
 	MongoDBName          = loadEnvOrDefault("MONGO_DB_NAME", "factsfood")
 	MongoCtxTimeout      = time.Duration(loadIntEnvOrDefault("MONGO_CONTEXT_TIMEOUT_SECONDS", 10)) * time.Second
-	ActivationExpiration = time.Duration(loadIntEnvOrDefault("ACTIVATION_EXPIRATION", 10)) * time.Minute
+	ActivationExpiration = time.Duration(loadIntEnvOrDefault("ACTIVATION_EXPIRATION", 20)) * time.Minute
 )
 
 type EnvType uint8

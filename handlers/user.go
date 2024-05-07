@@ -9,10 +9,41 @@ import (
 	"github.com/nbittich/factsfood/services"
 	"github.com/nbittich/factsfood/types"
 	"github.com/nbittich/factsfood/views"
+	"github.com/nbittich/factsfood/views/utils"
 )
 
 func UserRouter(e *echo.Echo) {
 	e.POST("/users/new", newUserHandler).Name = "users.New"
+	e.GET("/users/activate", activateUserHandler).Name = "users.Activate"
+}
+
+func activateUserHandler(c echo.Context) error {
+	hash := c.QueryParam("hash")
+	request := c.Request()
+	accept := request.Header.Get(echo.HeaderAccept)
+	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
+
+	defer cancel()
+	active, err := services.ActivateUser(ctx, hash)
+	if err != nil {
+		c.Logger().Error("could not activate user: ", err)
+	}
+	message := types.Message{}
+	if active {
+		message.Type = types.SUCCESS
+		message.Message = "home.signup.user.activated"
+	} else {
+		message.Type = types.ERROR
+		message.Message = "home.signup.user.notActivated"
+	}
+
+	if accept == echo.MIMEApplicationJSON {
+		message.Message = utils.T(c.Request().Context(), message.Message)
+		return c.JSON(http.StatusOK, message)
+	} else {
+		c.SetRequest(request.WithContext(context.WithValue(request.Context(), types.MessageKey, message)))
+		return renderHTML(http.StatusOK, c, views.Home("Home"))
+	}
 }
 
 func newUserHandler(c echo.Context) error {

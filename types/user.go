@@ -56,5 +56,5 @@ func (userActivationURL *UserActivationURL) SetID(id string) {
 }
 
 func (user *UserActivationURL) GenerateURL(baseURL string) string {
-	return fmt.Sprintf("%s?activation=%s", baseURL, user.Hash)
+	return fmt.Sprintf("%s?hash=%s", baseURL, user.Hash)
 }

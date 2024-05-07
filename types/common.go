@@ -15,7 +15,22 @@ const (
 	LangKey            = CtxKey("lang")
 	CsrfKey            = CtxKey("csrf")
 	SignupFormErrorKey = CtxKey("signupFormError")
+	MessageKey         = CtxKey("message")
 )
+
+type MessageType int8
+
+const (
+	INFO MessageType = iota
+	SUCCESS
+	WARNING
+	ERROR
+)
+
+type Message struct {
+	Type    MessageType `json:"type"`
+	Message string      `json:"message"`
+}
 
 type (
 	CtxKey           string

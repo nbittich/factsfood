@@ -17,7 +17,7 @@ import (
 
 const (
 	UserCollection              = "user"
-	UserActivationURlCollection = "userActivationUrl"
+	UserActivationURLCollection = "userActivationUrl"
 )
 
 func hashPassword(password string) (string, error) {
@@ -75,7 +75,7 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 			fmt.Println("could not create user:", e)
 			return
 		}
-		activateURL, e := GenerateActivateURL(ctx, config.BaseURL+"/user/activate", user.ID)
+		activateURL, e := GenerateActivateURL(ctx, config.BaseURL+"/users/activate", user.ID)
 		if e != nil {
 			fmt.Println("error while generating validation url", err)
 			return
@@ -85,12 +85,48 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 	return user, nil
 }
 
+func ActivateUser(ctx context.Context, hash string) (bool, error) {
+	userCollection := db.GetCollection(UserCollection)
+	userActivationURLCollection := db.GetCollection(UserActivationURLCollection)
+
+	userActivationURL, err := db.FindOneBy[types.UserActivationURL](ctx, bson.M{
+		"hash": hash,
+	}, userActivationURLCollection)
+	if err != nil {
+		return false, err
+	}
+	now := time.Now()
+	duration := now.Sub(userActivationURL.UpdatedAt)
+	if duration > config.ActivationExpiration {
+		fmt.Println("activation link no longer valid")
+		return false, fmt.Errorf("invalid hash")
+	}
+	userActivationURL.UpdatedAt = now
+	user, err := db.FindOneByID[types.User](ctx, userCollection, userActivationURL.UserID)
+	if err != nil {
+		return false, err
+	}
+	if user.Enabled {
+		return false, fmt.Errorf("user already enabled")
+	}
+	user.Enabled = true
+	_, err = db.InsertOrUpdate(ctx, &user, userCollection)
+	if err != nil {
+		return false, err
+	}
+	_, _ = db.InsertOrUpdate(ctx, &userActivationURL, userActivationURLCollection)
+	return true, nil
+}
+
 func GenerateActivateURL(ctx context.Context, baseURL string, userID string) (string, error) {
 	userCollection := db.GetCollection(UserCollection)
-	userActivationURLCollection := db.GetCollection(UserActivationURlCollection)
+	userActivationURLCollection := db.GetCollection(UserActivationURLCollection)
 	user, err := db.FindOneByID[types.User](ctx, userCollection, userID)
 	if err != nil {
 		return "", err
+	}
+	if user.Enabled {
+		return "", fmt.Errorf("user.alreadyEnabled")
 	}
 	filter := bson.M{
 		"userId": user.ID,
