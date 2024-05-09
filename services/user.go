@@ -66,42 +66,39 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 		Enabled:  false, // FIXME should send an email
 	}
 
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
-		defer cancel()
-		// we can create user here, no need to be synchronous
+	go sendActivationEmail(user, true)
+	return user, nil
+}
+
+func sendActivationEmail(user *types.User, createUser bool) {
+	collection := db.GetCollection(UserCollection)
+
+	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
+	defer cancel()
+	if createUser {
 		_, e := db.InsertOrUpdate(ctx, user, collection)
 		if e != nil {
 			fmt.Println("could not create user:", e)
 			return
 		}
-		activateURL, e := GenerateActivateURL(ctx, config.BaseURL+"/users/activate", user.ID)
-		if e != nil {
-			fmt.Println("error while generating validation url", err)
-			return
-		}
-		email.SendAsync([]string{user.Email}, []string{}, "Activate your account", fmt.Sprintf(`<a href="%s">Activate your account now!</p>`, activateURL))
-	}()
-	return user, nil
+	}
+	activateURL, e := GenerateActivateURL(ctx, config.BaseURL+"/users/activate", user.ID)
+	if e != nil {
+		fmt.Println("error while generating validation url", e)
+		return
+	}
+	email.SendAsync([]string{user.Email}, []string{}, "Activate your account", fmt.Sprintf(`<a href="%s">Activate your account now!</p>`, activateURL))
 }
 
 func ActivateUser(ctx context.Context, hash string) (bool, error) {
 	userCollection := db.GetCollection(UserCollection)
 	userActivationURLCollection := db.GetCollection(UserActivationURLCollection)
-
 	userActivationURL, err := db.FindOneBy[types.UserActivationURL](ctx, bson.M{
 		"hash": hash,
 	}, userActivationURLCollection)
 	if err != nil {
 		return false, err
 	}
-	now := time.Now()
-	duration := now.Sub(userActivationURL.UpdatedAt)
-	if duration > config.ActivationExpiration {
-		fmt.Println("activation link no longer valid")
-		return false, fmt.Errorf("invalid hash")
-	}
-	userActivationURL.UpdatedAt = now
 	user, err := db.FindOneByID[types.User](ctx, userCollection, userActivationURL.UserID)
 	if err != nil {
 		return false, err
@@ -109,6 +106,15 @@ func ActivateUser(ctx context.Context, hash string) (bool, error) {
 	if user.Enabled {
 		return false, fmt.Errorf("user already enabled")
 	}
+	now := time.Now()
+	duration := now.Sub(userActivationURL.UpdatedAt)
+	if duration > config.ActivationExpiration {
+		fmt.Println("activation link no longer valid")
+		go sendActivationEmail(&user, false)
+		return false, fmt.Errorf("invalid hash")
+	}
+	userActivationURL.UpdatedAt = now
+
 	user.Enabled = true
 	_, err = db.InsertOrUpdate(ctx, &user, userCollection)
 	if err != nil {
