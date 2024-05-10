@@ -15,6 +15,7 @@ const (
 	LangKey            = CtxKey("lang")
 	CsrfKey            = CtxKey("csrf")
 	SignupFormErrorKey = CtxKey("signupFormError")
+	SigninFormErrorKey = CtxKey("signinFormError")
 	MessageKey         = CtxKey("message")
 )
 

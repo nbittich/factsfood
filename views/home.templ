@@ -6,15 +6,16 @@ import (
 	"github.com/nbittich/factsfood/types"
 )
 
-func initValues(ctx context.Context) (types.InvalidFormError, types.NewUserForm, bool) {
-	signUpFormError, _ := ctx.Value(types.SignupFormErrorKey).(types.InvalidFormError)
+func initValues(ctx context.Context) (types.InvalidFormError, types.InvalidFormError, types.NewUserForm, bool) {
+	signInFormError, _ := ctx.Value(types.SignupFormErrorKey).(types.InvalidFormError)
+	signUpFormError, _ := ctx.Value(types.SigninFormErrorKey).(types.InvalidFormError)
 	signUpForm, _ := signUpFormError.Form.(types.NewUserForm)
-	return signUpFormError, signUpForm, true
+	return signInFormError, signUpFormError, signUpForm, true
 }
 
 templ Home(name string) {
-	if signUpFormError, signUpForm,ok:=initValues(ctx); ok {
-		@layout.Layout("home.title", "/", home(name, signUpFormError, signUpForm), nil, extraJs(signUpFormError))
+	if signInFormError,signUpFormError, signUpForm,ok:=initValues(ctx); ok {
+		@layout.Layout("home.title", "/", home(name, signInFormError, signUpFormError, signUpForm), nil, extraJs(signUpFormError))
 	}
 }
 
@@ -32,15 +33,70 @@ templ message() {
 	}
 }
 
-templ home(_ string, signUpFormError types.InvalidFormError, signUpForm types.NewUserForm) {
+templ home(_ string, signInFormError types.InvalidFormError, signUpFormError types.InvalidFormError, signUpForm types.NewUserForm) {
 	<div class="d-flex justify-content-end">
-		<button class="btn btn-info me-1">
-			{ utils.T(ctx,"home.signin.title") }
-		</button>
+		@modalSignIn(signInFormError)
 		@modalSignUp(signUpFormError, signUpForm)
 	</div>
 	<div class="row p-2">
 		@message()
+	</div>
+}
+
+templ modalSignIn(signInFormError types.InvalidFormError) {
+	<button type="button" class="btn me-1 btn-primary" data-bs-toggle="modal" data-bs-target="#signInModal">
+		{ utils.T(ctx,"home.signin.title") }
+	</button>
+	<div class="modal fade" id="signInModal" tabindex="-1" aria-labelledby="signInModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h1 class="modal-title fs-5" id="signInModalLabel">{ utils.T(ctx,"home.signin.title") }</h1>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label={ utils.T(ctx, "common.close") }></button>
+				</div>
+				<div class="modal-body">
+					<form
+						id="signInForm"
+						method="POST"
+						action={ templ.URL("/users/login?lang=" + utils.GetLang(ctx)) }
+						onsubmit="return onSubmitForm()"
+					>
+						<input type="hidden" name="csrf" value={ ctx.Value(types.CsrfKey).(string) }/>
+						<div class="mb-1">
+							<label for="username" class="form-label">{ utils.T(ctx,"common.username") }</label>
+							<input
+								type="text"
+								class={ "form-control" }
+								id="username"
+								name="username"
+								value=""
+								required
+							/>
+							<div class="invalid-feedback">{ utils.T(ctx,"common.username") } { utils.T(ctx,"common.invalid") } </div>
+						</div>
+						<div class="mb-1">
+							<label for="password" class="form-label">{ utils.T(ctx, "common.password") }</label>
+							<input
+								type="password"
+								id="password"
+								name="password"
+								value=""
+								class={ "form-control" }
+								required
+							/>
+							<div class="invalid-feedback">{ utils.T(ctx,"common.password") } { utils.T(ctx,"common.invalid") } </div>
+						</div>
+						if err:= signInFormError.Messages["general"];err!=nil {
+							<div class="mb-1"><p class="text-danger">{ utils.T(ctx,err.(string)) }</p></div>
+						}
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{ utils.T(ctx, "common.close") }</button>
+					<button id="signinSubmitBtn" type="submit" class="btn btn-primary" form="signInForm">{ utils.T(ctx,"common.submit") }</button>
+				</div>
+			</div>
+		</div>
 	</div>
 }
 
@@ -99,7 +155,7 @@ templ modalSignUp(signUpFormError types.InvalidFormError, signUpForm types.NewUs
 							<div id="invalidConfirmEmail" class="invalid-feedback">{ utils.T(ctx,"home.signup.confirmEmail") } { utils.T(ctx,"common.invalid") } </div>
 						</div>
 						<div class="mb-1">
-							<label for="password" class="form-label">{ utils.T(ctx, "home.signup.password") }</label>
+							<label for="password" class="form-label">{ utils.T(ctx, "common.password") }</label>
 							<input
 								type="password"
 								id="password"
@@ -108,7 +164,7 @@ templ modalSignUp(signUpFormError types.InvalidFormError, signUpForm types.NewUs
 								class={ "form-control", templ.KV("is-invalid",signUpFormError.Messages["password"]!=nil ) }
 								required
 							/>
-							<div class="invalid-feedback">{ utils.T(ctx,"home.signup.password") } { utils.T(ctx,"common.invalid") } </div>
+							<div class="invalid-feedback">{ utils.T(ctx,"common.password") } { utils.T(ctx,"common.invalid") } </div>
 						</div>
 						<div class="mb-1">
 							<label for="confirmPassword" class="form-label">{ utils.T(ctx, "home.signup.confirmPassword") }</label>
