@@ -25,7 +25,7 @@ func hashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-func checkPasswordHash(password, hash string) bool {
+func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
@@ -88,6 +88,17 @@ func sendActivationEmail(user *types.User, createUser bool) {
 		return
 	}
 	email.SendAsync([]string{user.Email}, []string{}, "Activate your account", fmt.Sprintf(`<a href="%s">Activate your account now!</p>`, activateURL))
+}
+
+func FindByUsernameOrEmail(ctx context.Context, username string) (types.User, error) {
+	userCollection := db.GetCollection(UserCollection)
+	filter := bson.M{
+		"$or": []bson.M{
+			{"email": username},
+			{"username": username},
+		},
+	}
+	return db.FindOneBy[types.User](ctx, filter, userCollection)
 }
 
 func ActivateUser(ctx context.Context, hash string) (bool, error) {

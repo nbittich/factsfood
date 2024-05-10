@@ -3,7 +3,10 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/services"
@@ -15,6 +18,68 @@ import (
 func UserRouter(e *echo.Echo) {
 	e.POST("/users/new", newUserHandler).Name = "users.New"
 	e.GET("/users/activate", activateUserHandler).Name = "users.Activate"
+	e.POST("/users/login", loginHandler).Name = "users.Login"
+}
+
+func handleGeneralFormError(c echo.Context, accept string, invalidFormError types.InvalidFormError) error {
+	request := c.Request()
+	if accept == echo.MIMEApplicationJSON {
+		invalidFormError.Messages["general"] = utils.T(c.Request().Context(), invalidFormError.Messages["general"].(string))
+		return c.JSON(http.StatusBadRequest, invalidFormError)
+	} else {
+		c.SetRequest(request.WithContext(context.WithValue(request.Context(), types.SigninFormErrorKey, invalidFormError)))
+		return renderHTML(http.StatusOK, c, views.Home("Home"))
+	}
+}
+
+func loginHandler(c echo.Context) error {
+	username := strings.TrimSpace(c.FormValue("username"))
+	password := strings.TrimSpace(c.FormValue("password"))
+	request := c.Request()
+	accept := request.Header.Get(echo.HeaderAccept)
+	invalidFormError := types.InvalidFormError{Messages: types.InvalidMessage{"general": "home.signin.invalidCredentials"}}
+	if len(username) == 0 || len(password) == 0 {
+		return handleGeneralFormError(c, accept, invalidFormError)
+	}
+	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
+	defer cancel()
+	user, error := services.FindByUsernameOrEmail(ctx, username)
+
+	if error != nil || !user.Enabled {
+		return handleGeneralFormError(c, accept, invalidFormError)
+	}
+	passwordMatches := services.CheckPasswordHash(password, user.Password)
+	if !passwordMatches {
+		return handleGeneralFormError(c, accept, invalidFormError)
+	}
+	userClaims := types.UserClaims{
+		Username: user.Username,
+		Email:    user.Email,
+		Profile:  user.Profile,
+		Settings: user.Settings,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(config.JWTExpiresAFterMinutes)),
+			Issuer:    config.JWTIssuer,
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, userClaims)
+	ss, err := token.SignedString(config.JWTSecretKey)
+	if err != nil {
+		c.Logger().Error("error writing jwt", err)
+		return handleGeneralFormError(c, accept, invalidFormError)
+	}
+	if accept == echo.MIMEApplicationJSON {
+		jwt := map[string]string{"jwt": ss}
+		return c.JSON(http.StatusOK, jwt)
+	} else {
+		cookie := new(http.Cookie)
+		cookie.Name = config.JWTCookie
+		cookie.Path = "/"
+		cookie.Value = ss
+		cookie.Expires = time.Now().Add(config.JWTExpiresAFterMinutes)
+		c.SetCookie(cookie)
+		return renderHTML(http.StatusOK, c, views.Home("Home"))
+	}
 }
 
 func activateUserHandler(c echo.Context) error {

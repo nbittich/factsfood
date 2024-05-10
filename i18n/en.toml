@@ -5,6 +5,7 @@ world = "World"
 
 [home.signin]
 title = "Sign in"
+invalidCredentials = "Invalid credentials"
 
 [home.signup]
 title = "Sign up"

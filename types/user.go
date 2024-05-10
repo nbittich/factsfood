@@ -3,6 +3,8 @@ package types
 import (
 	"fmt"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type UserActivationURL struct {
@@ -28,6 +30,14 @@ type User struct {
 	Email    string      `json:"email"`
 	Profile  UserProfile `json:"profile"`
 	Settings UserSetting `json:"settings"`
+}
+
+type UserClaims struct {
+	Username string      `json:"username"`
+	Email    string      `json:"email"`
+	Profile  UserProfile `json:"profile"`
+	Settings UserSetting `json:"settings"`
+	jwt.RegisteredClaims
 }
 
 type UserProfile struct {

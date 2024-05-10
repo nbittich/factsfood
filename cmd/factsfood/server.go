@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nbittich/factsfood/config"
@@ -31,6 +32,8 @@ func main() {
 
 	if config.GoEnv == config.DEVELOPMENT {
 		e.Use(middleware.CORS())
+	} else {
+		e.Use(middleware.Secure()) // fixme, could cause issues I guess? not tested
 	}
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		TokenLookup: "form:csrf",
@@ -42,6 +45,19 @@ func main() {
 	e.Use(ffMidleware.I18n)
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+
+	// JWT
+	e.Use(echojwt.WithConfig(echojwt.Config{
+		SigningKey:             config.JWTSecretKey,
+		TokenLookup:            fmt.Sprintf("header:Authorization:Bearer, cookie:%s", config.JWTCookie),
+		ContinueOnIgnoredError: true,
+		ErrorHandler: func(c echo.Context, err error) error {
+			if !strings.Contains(c.Path(), "/u/") {
+				return nil
+			}
+			return err
+		},
+	}))
 
 	// end middleware
 

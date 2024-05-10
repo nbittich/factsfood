@@ -5,6 +5,7 @@ world = "le monde"
 
 [home.signin]
 title = "Se connecter"
+invalidCredentials = "Nom d'utilisateur/Mot de passe incorrect"
 
 [home.signup]
 title = "Créer un compte"

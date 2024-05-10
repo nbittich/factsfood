@@ -7,22 +7,26 @@ import (
 )
 
 func initValues(ctx context.Context) (types.InvalidFormError, types.InvalidFormError, types.NewUserForm, bool) {
-	signInFormError, _ := ctx.Value(types.SignupFormErrorKey).(types.InvalidFormError)
-	signUpFormError, _ := ctx.Value(types.SigninFormErrorKey).(types.InvalidFormError)
+	signInFormError, _ := ctx.Value(types.SigninFormErrorKey).(types.InvalidFormError)
+	signUpFormError, _ := ctx.Value(types.SignupFormErrorKey).(types.InvalidFormError)
 	signUpForm, _ := signUpFormError.Form.(types.NewUserForm)
 	return signInFormError, signUpFormError, signUpForm, true
 }
 
 templ Home(name string) {
 	if signInFormError,signUpFormError, signUpForm,ok:=initValues(ctx); ok {
-		@layout.Layout("home.title", "/", home(name, signInFormError, signUpFormError, signUpForm), nil, extraJs(signUpFormError))
+		@layout.Layout("home.title", "/", home(name, signInFormError, signUpFormError, signUpForm), nil, extraJs(signUpFormError, signInFormError))
 	}
 }
 
-templ extraJs(signUpFormError types.InvalidFormError) {
+templ extraJs(signUpFormError types.InvalidFormError, signInFormError types.InvalidFormError) {
 	if len(signUpFormError.Messages) != 0 {
 		<script>
-				openModal("signUpModal");
+			openModal("signUpModal");
+		</script>
+	} else if len(signInFormError.Messages) != 0 {
+		<script>
+			openModal("signInModal")
 		</script>
 	}
 }

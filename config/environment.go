@@ -11,23 +11,27 @@ import (
 )
 
 var (
-	Host                 = loadEnvOrDefault("HOST", "0.0.0.0")
-	Port                 = loadEnvOrDefault("PORT", "8080")
-	BaseURL              = loadEnvOrDefault("BASE_URL", fmt.Sprintf("http://%s:%s", Host, Port))
-	GoEnv                = env(loadEnvOrDefault("GO_ENV", "development"))
-	LogLevel             = logLevel(loadEnvOrDefault("LOG_LEVEL", "INFO"))
-	SMTPHost             = loadEnvOrDefault("SMTP_HOST", "localhost")
-	SMTPPort             = loadIntEnvOrDefault("SMTP_PORT", 1025)
-	SMTPFrom             = loadEnvOrDefault("SMTP_FROM", "test@localhost")
-	SMTPPassword         = loadEnvOrDefault("SMTP_PASSWORD", "")
-	SMTPSSL              = loadBoolOrDefault("SMTP_SSL", false)
-	MongoHost            = loadEnvOrDefault("MONGO_HOST", "localhost")
-	MongoPort            = loadEnvOrDefault("MONGO_PORT", "27017")
-	MongoUser            = loadEnvOrDefault("MONGO_USER", "root")
-	MongoPassword        = loadEnvOrDefault("MONGO_PASSWORD", "root")
-	MongoDBName          = loadEnvOrDefault("MONGO_DB_NAME", "factsfood")
-	MongoCtxTimeout      = time.Duration(loadIntEnvOrDefault("MONGO_CONTEXT_TIMEOUT_SECONDS", 10)) * time.Second
-	ActivationExpiration = time.Duration(loadIntEnvOrDefault("ACTIVATION_EXPIRATION", 20)) * time.Minute
+	Host                   = loadEnvOrDefault("HOST", "0.0.0.0")
+	Port                   = loadEnvOrDefault("PORT", "8080")
+	BaseURL                = loadEnvOrDefault("BASE_URL", fmt.Sprintf("http://%s:%s", Host, Port))
+	GoEnv                  = env(loadEnvOrDefault("GO_ENV", "development"))
+	LogLevel               = logLevel(loadEnvOrDefault("LOG_LEVEL", "INFO"))
+	SMTPHost               = loadEnvOrDefault("SMTP_HOST", "localhost")
+	SMTPPort               = loadIntEnvOrDefault("SMTP_PORT", 1025)
+	SMTPFrom               = loadEnvOrDefault("SMTP_FROM", "test@localhost")
+	SMTPPassword           = loadEnvOrDefault("SMTP_PASSWORD", "")
+	SMTPSSL                = loadBoolOrDefault("SMTP_SSL", false)
+	MongoHost              = loadEnvOrDefault("MONGO_HOST", "localhost")
+	MongoPort              = loadEnvOrDefault("MONGO_PORT", "27017")
+	MongoUser              = loadEnvOrDefault("MONGO_USER", "root")
+	MongoPassword          = loadEnvOrDefault("MONGO_PASSWORD", "root")
+	MongoDBName            = loadEnvOrDefault("MONGO_DB_NAME", "factsfood")
+	MongoCtxTimeout        = time.Duration(loadIntEnvOrDefault("MONGO_CONTEXT_TIMEOUT_SECONDS", 10)) * time.Second
+	ActivationExpiration   = time.Duration(loadIntEnvOrDefault("ACTIVATION_EXPIRATION", 20)) * time.Minute
+	JWTSecretKey           = []byte(loadEnvOrDefault("JWT_SECRET_KEY", "secret"))
+	JWTExpiresAFterMinutes = time.Duration(loadIntEnvOrDefault("JWT_EXPIRES_AFTER_MINUTES", 1)) * time.Minute
+	JWTIssuer              = loadEnvOrDefault("JWT_ISSUER", "FactsFood")
+	JWTCookie              = loadEnvOrDefault("JWT_COOKIE", "jwt")
 )
 
 type EnvType uint8
