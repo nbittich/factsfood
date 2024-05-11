@@ -52,7 +52,7 @@ func loginHandler(c echo.Context) error {
 	if !passwordMatches {
 		return handleGeneralFormError(c, accept, invalidFormError)
 	}
-	userClaims := types.UserClaims{
+	userClaims := &types.UserClaims{
 		Username: user.Username,
 		Email:    user.Email,
 		Profile:  user.Profile,
@@ -141,6 +141,11 @@ func newUserHandler(c echo.Context) error {
 	if accept == echo.MIMEApplicationJSON {
 		return c.JSON(http.StatusOK, user)
 	} else {
-		return c.Redirect(http.StatusMovedPermanently, "/")
+		message := types.Message{}
+		message.Type = types.SUCCESS
+		message.Message = "home.signup.user.created"
+		c.SetRequest(request.WithContext(context.WithValue(request.Context(), types.MessageKey, message)))
+
+		return renderHTML(http.StatusMovedPermanently, c, views.Home("Home"))
 	}
 }

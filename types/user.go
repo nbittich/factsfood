@@ -42,7 +42,7 @@ type UserClaims struct {
 
 type UserProfile struct {
 	FirstName string `json:"firstName"`
-	LastName  string `json:"LastName"`
+	LastName  string `json:"lastName"`
 }
 
 type UserSetting struct {

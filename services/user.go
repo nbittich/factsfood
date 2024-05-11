@@ -31,6 +31,7 @@ func CheckPasswordHash(password, hash string) bool {
 }
 
 func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, error) {
+	lang := ctx.Value(types.LangKey).(string)
 	collection := db.GetCollection(UserCollection)
 	err := utils.ValidateStruct(newUserForm)
 	if err != nil {
@@ -63,7 +64,9 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 		Username: newUserForm.Username,
 		Password: password,
 		Email:    newUserForm.Email,
-		Enabled:  false, // FIXME should send an email
+		Enabled:  false,
+		Settings: types.UserSetting{Lang: lang},
+		Profile:  types.UserProfile{},
 	}
 
 	go sendActivationEmail(user, true)

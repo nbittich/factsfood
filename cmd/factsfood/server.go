@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -13,6 +14,7 @@ import (
 	ffMidleware "github.com/nbittich/factsfood/middleware"
 	"github.com/nbittich/factsfood/services/db"
 	"github.com/nbittich/factsfood/services/email"
+	"github.com/nbittich/factsfood/types"
 )
 
 //go:embed banner.txt
@@ -32,9 +34,12 @@ func main() {
 
 	if config.GoEnv == config.DEVELOPMENT {
 		e.Use(middleware.CORS())
-	} else {
-		e.Use(middleware.Secure()) // fixme, could cause issues I guess? not tested
 	}
+
+	if config.GoEnv == config.PRODUCTION {
+		e.Use(middleware.Secure())
+	}
+
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		TokenLookup: "form:csrf",
 		Skipper: func(c echo.Context) bool {
@@ -42,23 +47,26 @@ func main() {
 		},
 	}))
 	e.Use(middleware.Gzip())
-	e.Use(ffMidleware.I18n)
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
 	// JWT
 	e.Use(echojwt.WithConfig(echojwt.Config{
 		SigningKey:             config.JWTSecretKey,
-		TokenLookup:            fmt.Sprintf("header:Authorization:Bearer, cookie:%s", config.JWTCookie),
+		TokenLookup:            fmt.Sprintf("header:Authorization:Bearer ,cookie:%s", config.JWTCookie),
 		ContinueOnIgnoredError: true,
+		NewClaimsFunc: func(c echo.Context) jwt.Claims {
+			return new(types.UserClaims)
+		},
 		ErrorHandler: func(c echo.Context, err error) error {
-			if !strings.Contains(c.Path(), "/u/") {
+			if !strings.Contains(c.Path(), "/s/") {
 				return nil
 			}
 			return err
 		},
 	}))
 
+	e.Use(ffMidleware.I18n)
 	// end middleware
 
 	e.HideBanner = true

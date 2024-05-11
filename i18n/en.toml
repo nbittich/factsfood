@@ -15,7 +15,7 @@ confirmPassword = "Confirm Password"
 user.exist = "User already exists"
 user.activated = "User has been successfully activated"
 user.notActivated = "User could not be activated"
-
+user.created = "User has been created. Check your email for activation"
 [common]
 email = "Email"
 submit = "Submit"

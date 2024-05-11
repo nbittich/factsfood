@@ -29,7 +29,7 @@ var (
 	MongoCtxTimeout        = time.Duration(loadIntEnvOrDefault("MONGO_CONTEXT_TIMEOUT_SECONDS", 10)) * time.Second
 	ActivationExpiration   = time.Duration(loadIntEnvOrDefault("ACTIVATION_EXPIRATION", 20)) * time.Minute
 	JWTSecretKey           = []byte(loadEnvOrDefault("JWT_SECRET_KEY", "secret"))
-	JWTExpiresAFterMinutes = time.Duration(loadIntEnvOrDefault("JWT_EXPIRES_AFTER_MINUTES", 1)) * time.Minute
+	JWTExpiresAFterMinutes = time.Duration(loadIntEnvOrDefault("JWT_EXPIRES_AFTER_MINUTES", 10)) * time.Minute
 	JWTIssuer              = loadEnvOrDefault("JWT_ISSUER", "FactsFood")
 	JWTCookie              = loadEnvOrDefault("JWT_COOKIE", "jwt")
 )
