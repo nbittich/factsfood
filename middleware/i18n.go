@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/BurntSushi/toml"
 	"github.com/golang-jwt/jwt/v5"
@@ -28,7 +27,6 @@ func I18n(next echo.HandlerFunc) echo.HandlerFunc {
 		accept := r.Header.Get("Accept-Language")
 		ctx := r.Context()
 		if tok, ok := c.Get("user").(*jwt.Token); ok {
-			fmt.Println(tok)
 			if user, ok := tok.Claims.(*types.UserClaims); ok {
 				if user.Settings.Lang != "" {
 					lang = user.Settings.Lang
