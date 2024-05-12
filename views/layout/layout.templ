@@ -4,7 +4,7 @@ import (
 	"github.com/nbittich/factsfood/views/utils"
 )
 
-templ Layout(title string, href string, body templ.Component, extraCss templ.Component, extraJs templ.Component) {
+templ Layout(title string, href string, body templ.Component, extraCss templ.Component, extraJs ...templ.Component) {
 	<!DOCTYPE html>
 	<html lang="en" data-bs-theme="light">
 		<head>
@@ -26,14 +26,17 @@ templ Layout(title string, href string, body templ.Component, extraCss templ.Com
 						@sidebar(href)
 					</div>
 					<div class="col-sm p-3   min-vh-100">
+						@topbar()
 						@body
 					</div>
 				</div>
 			</div>
 			<script src="/assets/js/bootstrap.min.js"></script>
 			<script src="/assets/js/app.js"></script>
-			if extraJs != nil {
-				@extraJs
+			if len(extraJs) != 0 {
+				for _,js := range extraJs {
+					@js
+				}
 			}
 		</body>
 	</html>

@@ -1,9 +1,7 @@
 
 function openModal(id) {
-  document.addEventListener("DOMContentLoaded", function () {
-    var modal = new bootstrap.Modal(document.getElementById(id));
-    modal.show();
-  });
+  const modal = new bootstrap.Modal(document.getElementById(id));
+  modal.show();
 }
 
 function onSubmitForm() {

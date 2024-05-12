@@ -80,7 +80,8 @@ func loginHandler(c echo.Context) error {
 		cookie.Value = ss
 		cookie.Expires = time.Now().Add(config.JWTExpiresAFterMinutes)
 		c.SetCookie(cookie)
-		return renderHTML(http.StatusOK, c, views.Home("Home"))
+		return c.Redirect(http.StatusSeeOther, "/")
+
 	}
 }
 

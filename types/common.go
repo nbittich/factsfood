@@ -17,6 +17,7 @@ const (
 	SignupFormErrorKey = CtxKey("signupFormError")
 	SigninFormErrorKey = CtxKey("signinFormError")
 	MessageKey         = CtxKey("message")
+	UserKey            = CtxKey("user")
 )
 
 type MessageType int8
