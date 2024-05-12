@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/go-querystring/query"
 	"github.com/labstack/echo/v4"
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/services"
@@ -106,8 +108,8 @@ func activateUserHandler(c echo.Context) error {
 		message.Message = utils.T(c.Request().Context(), message.Message)
 		return c.JSON(http.StatusOK, message)
 	} else {
-		c.SetRequest(request.WithContext(context.WithValue(request.Context(), types.MessageKey, message)))
-		return renderHTML(http.StatusOK, c, views.Home("Home"))
+		v, _ := query.Values(message)
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/?%s", v.Encode()))
 	}
 }
 
@@ -144,8 +146,7 @@ func newUserHandler(c echo.Context) error {
 		message := types.Message{}
 		message.Type = types.SUCCESS
 		message.Message = "home.signup.user.created"
-		c.SetRequest(request.WithContext(context.WithValue(request.Context(), types.MessageKey, message)))
-
-		return renderHTML(http.StatusMovedPermanently, c, views.Home("Home"))
+		v, _ := query.Values(message)
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/?%s", v.Encode()))
 	}
 }

@@ -29,8 +29,8 @@ const (
 )
 
 type Message struct {
-	Type    MessageType `json:"type"`
-	Message string      `json:"message"`
+	Type    MessageType `json:"type" url:"type" param:"type" form:"type" query:"type"`
+	Message string      `json:"message" url:"message" param:"message" form:"message" query:"message"`
 }
 
 type (
