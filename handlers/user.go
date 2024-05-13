@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-querystring/query"
 	"github.com/labstack/echo/v4"
 	"github.com/nbittich/factsfood/config"
+	"github.com/nbittich/factsfood/middleware"
 	"github.com/nbittich/factsfood/services"
 	"github.com/nbittich/factsfood/types"
 	"github.com/nbittich/factsfood/views"
@@ -18,9 +19,10 @@ import (
 )
 
 func UserRouter(e *echo.Echo) {
-	e.POST("/users/new", newUserHandler).Name = "users.New"
-	e.GET("/users/activate", activateUserHandler).Name = "users.Activate"
-	e.POST("/users/login", loginHandler).Name = "users.Login"
+	unauthenticatedUserGroup := e.Group("/users", middleware.UnauthenticatedOnly)
+	unauthenticatedUserGroup.POST("/new", newUserHandler).Name = "users.New"
+	unauthenticatedUserGroup.GET("/activate", activateUserHandler).Name = "users.Activate"
+	unauthenticatedUserGroup.POST("/login", loginHandler).Name = "users.Login"
 }
 
 func handleGeneralFormError(c echo.Context, accept string, invalidFormError types.InvalidFormError) error {

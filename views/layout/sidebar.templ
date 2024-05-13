@@ -1,11 +1,15 @@
 package layout
 
+import "github.com/nbittich/factsfood/types"
+import "github.com/nbittich/factsfood/views/utils"
+
 type MenuLink struct {
 	href  string
 	icon  string
 	title string
 }
 
+/*
 var menuLinks = [...]MenuLink{
 	{
 		"/",
@@ -32,22 +36,22 @@ var menuLinks = [...]MenuLink{
 		"bi-people",
 		"Customers",
 	},
+}*/
+
+func getMenuLinks(ctx context.Context) []MenuLink {
+	menuLinks := make([]MenuLink, 10)
+	if _, ok := ctx.Value(types.UserKey).(types.UserClaims); ok {
+		menuLinks = append(menuLinks, MenuLink{"/s/logout", "bi-box-arrow-right", utils.T(ctx, "common.logout")})
+	}
+	menuLinks = append(menuLinks, MenuLink{"/", "bi-house", utils.T(ctx, "home.title")})
+
+	return menuLinks
 }
 
 templ sidebar(currentHref string) {
 	<div class="d-flex flex-sm-column flex-row justify-content-center flex-nowrap">
-		<a
-			href="/"
-			class="d-block  p-3 link-body-emphasis text-decoration-none"
-			title=""
-			data-bs-toggle="tooltip"
-			data-bs-placement="right"
-			data-bs-original-title="Icon-only"
-		>
-			<i class="bi-bootstrap fs-1"></i>
-		</a>
 		<ul class="nav nav-pills nav-flush flex-sm-column flex-row flex-nowrap mb-auto  text-center  ">
-			for _,link:= range menuLinks {
+			for _,link:= range getMenuLinks(ctx) {
 				<li class="nav-item">
 					<a
 						href={ templ.URL(link.href) }
