@@ -22,6 +22,7 @@ func UserRouter(e *echo.Echo) {
 	userGroup.POST("/new", newUserHandler).Name = "users.New"
 	userGroup.GET("/activate", activateUserHandler).Name = "users.Activate"
 	userGroup.POST("/login", loginHandler).Name = "users.Login"
+	userGroup.GET("/logout", logoutHandler).Name = "users.Logout"
 }
 
 func handleGeneralFormError(c echo.Context, accept string, invalidFormError types.InvalidFormError) error {
@@ -32,6 +33,30 @@ func handleGeneralFormError(c echo.Context, accept string, invalidFormError type
 	} else {
 		c.SetRequest(request.WithContext(context.WithValue(request.Context(), types.SigninFormErrorKey, invalidFormError)))
 		return renderHTML(http.StatusOK, c, views.Home("Home"))
+	}
+}
+
+func logoutHandler(c echo.Context) error {
+	request := c.Request()
+
+	accept := request.Header.Get(echo.HeaderAccept)
+	// Set the cookie in the response headers
+	if accept == echo.MIMEApplicationJSON {
+		return c.JSON(http.StatusOK, &types.Message{
+			Type:    types.WARNING,
+			Message: "cannot logout with content type 'application/json'",
+		})
+	} else {
+		cookie := &http.Cookie{
+			Name:    config.JWTCookie,
+			Path:    "/",
+			Value:   "",
+			Expires: time.Now().AddDate(0, -1, 0), // Set expiration time to the past
+		}
+		c.SetCookie(cookie)
+
+		return c.Redirect(http.StatusSeeOther, "/")
+
 	}
 }
 

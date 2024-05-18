@@ -43,7 +43,9 @@ func main() {
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		TokenLookup: "form:csrf",
 		Skipper: func(c echo.Context) bool {
-			return strings.Contains(c.Path(), "assets")
+			request := c.Request()
+			accept := request.Header.Get(echo.HeaderAccept)
+			return strings.Contains(c.Path(), "assets") || accept == echo.MIMEApplicationJSON
 		},
 	}))
 	e.Use(middleware.Gzip())
