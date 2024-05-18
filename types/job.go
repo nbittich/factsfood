@@ -12,11 +12,20 @@ type JobResult struct {
 	Logs        []string   `json:"logs"`
 }
 
+func (jobResult JobResult) GetID() string {
+	return jobResult.ID
+}
+
+func (jobResult *JobResult) SetID(id string) {
+	jobResult.ID = id
+}
+
 type Job struct {
 	CronExpression string
 	NextSchedule   time.Time
 	Name           string
 	Description    string
+	Disabled       bool
 	Processor      JobProcessor
 }
 
