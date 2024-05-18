@@ -58,13 +58,10 @@ func main() {
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(types.UserClaims)
 		},
-		ErrorHandler: func(c echo.Context, err error) error {
-			if !strings.Contains(c.Path(), "/s/") {
-				return nil
-			}
-			return err
-		},
+		ErrorHandler: ffMidleware.JWTErrorHandler,
 	}))
+
+	e.Use(ffMidleware.ValidateAuth)
 
 	e.Use(ffMidleware.I18n)
 	// end middleware

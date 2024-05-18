@@ -11,7 +11,6 @@ import (
 	"github.com/google/go-querystring/query"
 	"github.com/labstack/echo/v4"
 	"github.com/nbittich/factsfood/config"
-	"github.com/nbittich/factsfood/middleware"
 	"github.com/nbittich/factsfood/services"
 	"github.com/nbittich/factsfood/types"
 	"github.com/nbittich/factsfood/views"
@@ -19,10 +18,10 @@ import (
 )
 
 func UserRouter(e *echo.Echo) {
-	unauthenticatedUserGroup := e.Group("/users", middleware.UnauthenticatedOnly)
-	unauthenticatedUserGroup.POST("/new", newUserHandler).Name = "users.New"
-	unauthenticatedUserGroup.GET("/activate", activateUserHandler).Name = "users.Activate"
-	unauthenticatedUserGroup.POST("/login", loginHandler).Name = "users.Login"
+	userGroup := e.Group("/users")
+	userGroup.POST("/new", newUserHandler).Name = "users.New"
+	userGroup.GET("/activate", activateUserHandler).Name = "users.Activate"
+	userGroup.POST("/login", loginHandler).Name = "users.Login"
 }
 
 func handleGeneralFormError(c echo.Context, accept string, invalidFormError types.InvalidFormError) error {
@@ -61,6 +60,7 @@ func loginHandler(c echo.Context) error {
 		Email:    user.Email,
 		Profile:  user.Profile,
 		Settings: user.Settings,
+		Roles:    user.Roles,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(config.JWTExpiresAFterMinutes)),
 			Issuer:    config.JWTIssuer,

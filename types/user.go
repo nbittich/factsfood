@@ -29,6 +29,7 @@ type User struct {
 	Enabled  bool        `json:"enabled"`
 	Email    string      `json:"email"`
 	Profile  UserProfile `json:"profile"`
+	Roles    []Role      `json:"roles"`
 	Settings UserSetting `json:"settings"`
 }
 
@@ -37,6 +38,7 @@ type UserClaims struct {
 	Email    string      `json:"email"`
 	Profile  UserProfile `json:"profile"`
 	Settings UserSetting `json:"settings"`
+	Roles    []Role      `json:"roles"`
 	jwt.RegisteredClaims
 }
 
@@ -48,6 +50,13 @@ type UserProfile struct {
 type UserSetting struct {
 	Lang string `json:"lang"`
 }
+
+type Role uint8
+
+const (
+	USER Role = iota + 1
+	ADMIN
+)
 
 func (user User) GetID() string {
 	return user.ID

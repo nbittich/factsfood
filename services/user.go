@@ -67,6 +67,7 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, 
 		Enabled:  false,
 		Settings: types.UserSetting{Lang: lang},
 		Profile:  types.UserProfile{},
+		Roles:    []types.Role{types.USER},
 	}
 
 	go sendActivationEmail(user, true)

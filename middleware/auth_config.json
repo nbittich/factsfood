@@ -1,0 +1,12 @@
+[
+  {
+    "regex": "^$|^\\/$|^\\/assets\\/.*$|^favicon.ico$",
+    "unauthenticated": false,
+    "authenticated": false
+  },
+  {
+    "regex": "^/users/(new|activate|login)$",
+    "unauthenticated": true,
+    "authenticated": false
+  }
+]
