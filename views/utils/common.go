@@ -2,7 +2,7 @@ package utils
 
 import "github.com/nbittich/factsfood/types"
 
-func GetAlertClassKey(t types.MessageType) string {
+func GetAlertClassKey(t types.StatusType) string {
 	switch t {
 	case types.INFO:
 		return "alert-info"

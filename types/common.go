@@ -20,18 +20,18 @@ const (
 	UserKey            = CtxKey("user")
 )
 
-type MessageType int8
+type StatusType int8
 
 const (
-	INFO MessageType = iota
+	INFO StatusType = iota
 	SUCCESS
 	WARNING
 	ERROR
 )
 
 type Message struct {
-	Type    MessageType `json:"type" url:"type" param:"type" form:"type" query:"type"`
-	Message string      `json:"message" url:"message" param:"message" form:"message" query:"message"`
+	Type    StatusType `json:"type" url:"type" param:"type" form:"type" query:"type"`
+	Message string     `json:"message" url:"message" param:"message" form:"message" query:"message"`
 }
 
 type (
