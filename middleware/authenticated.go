@@ -14,7 +14,7 @@ import (
 )
 
 type AuthConfig struct {
-	Regex           string       `json:"regex"`
+	Pattern         string       `json:"pattern"`
 	Authenticated   bool         `json:"authenticated"`
 	Unauthenticated bool         `json:"unauthenticated"`
 	Roles           []types.Role `json:"roles"`
@@ -32,7 +32,7 @@ func init() {
 
 func JWTErrorHandler(c echo.Context, err error) error {
 	for _, ac := range authConfigs {
-		if m, _ := regexp.MatchString(ac.Regex, c.Path()); m {
+		if m, _ := regexp.MatchString(ac.Pattern, c.Path()); m {
 			if ac.Authenticated {
 				return err
 			}
@@ -72,7 +72,7 @@ func ValidateAuth(next echo.HandlerFunc) echo.HandlerFunc {
 		user := getUser(c)
 
 		for _, ac := range authConfigs {
-			if m, _ := regexp.MatchString(ac.Regex, c.Path()); m {
+			if m, _ := regexp.MatchString(ac.Pattern, c.Path()); m {
 				if ac.Unauthenticated && user != nil {
 					return forbidden(c)
 				}

@@ -1,16 +1,16 @@
 [
   {
-    "regex": "^$|^\\/$|^\\/assets\\/.*$|^favicon.ico$",
+    "pattern": "^$|^\\/$|^\\/assets\\/.*$|^favicon.ico$",
     "unauthenticated": false,
     "authenticated": false
   },
   {
-    "regex": "^/users/(new|activate|login)$",
+    "pattern": "^/users/(new|activate|login)$",
     "unauthenticated": true,
     "authenticated": false
   },
   {
-    "regex": "^/users/logout$",
+    "pattern": "^/users/logout$",
     "authenticated": true,
     "unauthenticated": false
   }
