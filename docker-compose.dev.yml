@@ -8,6 +8,9 @@ services:
       - ./docker/env-files/dev/express.env
     ports:
       - 8081:8081
+  migrations:
+    env_file:
+      - ./docker/env-files/dev/migration.env
   mongo:
     env_file:
       - ./docker/env-files/dev/mongo.env
