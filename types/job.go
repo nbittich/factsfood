@@ -3,13 +3,17 @@ package types
 import "time"
 
 type JobResult struct {
-	ID          string     `bson:"_id" json:"_id"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
-	Status      StatusType `json:"status"`
-	Logs        []string   `json:"logs"`
+	ID        string     `bson:"_id" json:"_id"`
+	Key       string     `json:"key"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
+	Status    StatusType `json:"status"`
+	Logs      []Log      `json:"logs"`
+}
+
+type Log struct {
+	Timestamp time.Time `json:"timestamp"`
+	Message   string    `json:"message"`
 }
 
 func (jobResult JobResult) GetID() string {
@@ -20,15 +24,29 @@ func (jobResult *JobResult) SetID(id string) {
 	jobResult.ID = id
 }
 
+type JobParams map[string]interface{}
+
 type Job struct {
-	CronExpression string
-	NextSchedule   time.Time
-	Name           string
-	Description    string
-	Disabled       bool
-	Processor      JobProcessor
+	ID             string    `bson:"_id" json:"_id"`
+	CronExpression string    `json:"cronExpression"`
+	NextSchedule   time.Time `json:"nextSchedule"`
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
+	Key            string    `json:"key"`
+	Name           string    `json:"name"`
+	Description    string    `json:"description"`
+	Disabled       bool      `json:"disabled"`
+	Params         JobParams `json:"params"`
+}
+
+func (job Job) GetID() string {
+	return job.ID
+}
+
+func (job *Job) SetID(id string) {
+	job.ID = id
 }
 
 type JobProcessor interface {
-	Process() (JobResult, error)
+	Process(job *Job) (*JobResult, error)
 }

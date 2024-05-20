@@ -7,5 +7,14 @@ services:
     restart: always
     volumes:
       - ./docker/data/db:/data/db
+  ####### Migration #######
+  migrations:
+    image: nbittich/mongodb-migration:v0.1.0
+    restart: "no"
+    volumes:
+      - ./config/migrations:/migrations
+    networks:
+      factsfood:
+
 networks:
   factsfood:
