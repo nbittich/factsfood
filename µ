@@ -1,6 +1,10 @@
-package types
+package job
 
-import "time"
+import (
+	"time"
+
+	"github.com/nbittich/factsfood/types"
+)
 
 type JobError uint8
 
@@ -22,12 +26,12 @@ func (j JobError) Error() string {
 }
 
 type JobResult struct {
-	ID        string     `bson:"_id" json:"_id"`
-	Key       string     `json:"key"`
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt time.Time  `json:"updatedAt"`
-	Status    StatusType `json:"status"`
-	Logs      []Log      `json:"logs"`
+	ID        string           `bson:"_id" json:"_id"`
+	Key       string           `json:"key"`
+	CreatedAt time.Time        `json:"createdAt"`
+	UpdatedAt time.Time        `json:"updatedAt"`
+	Status    types.StatusType `json:"status"`
+	Logs      []Log            `json:"logs"`
 }
 
 type Log struct {

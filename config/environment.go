@@ -32,6 +32,7 @@ var (
 	JWTExpiresAFterMinutes = time.Duration(loadIntEnvOrDefault("JWT_EXPIRES_AFTER_MINUTES", 10)) * time.Minute
 	JWTIssuer              = loadEnvOrDefault("JWT_ISSUER", "FactsFood")
 	JWTCookie              = loadEnvOrDefault("JWT_COOKIE", "jwt")
+	TempDir                = loadEnvOrDefault("TMP_DIRECTORY", os.TempDir())
 )
 
 type EnvType uint8
