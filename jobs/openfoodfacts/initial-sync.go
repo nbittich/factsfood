@@ -15,6 +15,7 @@ import (
 const (
 	jobKey           = "OFF_INITIAL_SYNC_JOB"
 	endpointParamKey = "endpoint"
+	csvSeparatorKey  = "separator"
 )
 
 type InitialSync struct{}
@@ -22,18 +23,24 @@ type InitialSync struct{}
 func (is InitialSync) process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	jr := jobTypes.JobResult{
 		Key:       job.Key,
-		Status:    types.SUCCESS,
+		Status:    types.ERROR,
 		CreatedAt: time.Now(),
 		Logs:      make([]jobTypes.Log, 10),
 	}
 	if job.Disabled {
-		return nil, jobTypes.DISABLED
+		return jobs.StatusError(&jr, jobTypes.DISABLED)
 	}
 	endpoint, ok := job.Params[endpointParamKey].(string)
 
 	if !ok {
-		fmt.Println("missing or invalid endpoint param: ", job.Params)
-		return nil, jobTypes.INVALIDPARAM
+		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid endpoint param %s: %s", endpointParamKey, job.Params)))
+		return jobs.StatusError(&jr, jobTypes.INVALIDPARAM)
+	}
+
+	separator, ok := job.Params[csvSeparatorKey].(string)
+	if !ok {
+		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid endpoint param %s: %s", csvSeparatorKey, job.Params)))
+		return jobs.StatusError(&jr, jobTypes.INVALIDPARAM)
 	}
 
 	tempPath := path.Join(config.TempDir, fmt.Sprintf("%s.csv.gz", uuid.New().String()))
@@ -42,6 +49,9 @@ func (is InitialSync) process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	if err := jobs.DownloadFile(endpoint, tempPath); err != nil {
 		return jobs.StatusError(&jr, err)
 	}
+
+	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("CSV file %s downloaded", tempPath)))
+	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%s' separator", separator)))
 
 	return &jr, nil
 }

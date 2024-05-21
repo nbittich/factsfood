@@ -44,3 +44,10 @@ func StatusError(jr *job.JobResult, err error) (*job.JobResult, error) {
 	jr.Logs = append(jr.Logs, job.Log{Timestamp: time.Now(), Message: fmt.Sprintf("error while running job %s: %v", jr.Key, err)})
 	return jr, err
 }
+
+func NewLog(msg string) job.Log {
+	return job.Log{
+		Timestamp: time.Now(),
+		Message:   msg,
+	}
+}

@@ -5,15 +5,15 @@ services:
       factsfood:
     restart: always
     env_file:
-      - ./docker/env-files/dev/express.env
+      - ./env-files/dev/express.env
     ports:
       - 8081:8081
   migrations:
     env_file:
-      - ./docker/env-files/dev/migration.env
+      - ./env-files/dev/migration.env
   mongo:
     env_file:
-      - ./docker/env-files/dev/mongo.env
+      - ./env-files/dev/mongo.env
     ports:
       - 27017:27017
   maildev:
