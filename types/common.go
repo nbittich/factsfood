@@ -23,7 +23,7 @@ const (
 type StatusType int8
 
 const (
-	INFO StatusType = iota
+	INFO StatusType = iota + 1
 	SUCCESS
 	WARNING
 	ERROR

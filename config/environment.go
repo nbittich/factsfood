@@ -37,7 +37,7 @@ var (
 type EnvType uint8
 
 const (
-	DEVELOPMENT EnvType = iota
+	DEVELOPMENT EnvType = iota + 1
 	TEST
 	PRODUCTION
 )

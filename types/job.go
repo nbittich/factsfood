@@ -2,6 +2,25 @@ package types
 
 import "time"
 
+type JobError uint8
+
+const (
+	DISABLED JobError = iota + 1
+	INVALIDPARAM
+)
+
+func (j JobError) Error() string {
+	switch j {
+	case DISABLED:
+		return "job disabled"
+	case INVALIDPARAM:
+		return "missing or invalid param in job config"
+	default:
+		return "unknown job error"
+
+	}
+}
+
 type JobResult struct {
 	ID        string     `bson:"_id" json:"_id"`
 	Key       string     `json:"key"`
@@ -30,6 +49,7 @@ type Job struct {
 	ID             string    `bson:"_id" json:"_id"`
 	CronExpression string    `json:"cronExpression"`
 	NextSchedule   time.Time `json:"nextSchedule"`
+	SpecificDate   time.Time `json:"specificDate"`
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`
 	Key            string    `json:"key"`
