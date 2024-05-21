@@ -41,7 +41,7 @@ func DownloadFile(endpoint string, filepath string) error {
 func StatusError(jr *job.JobResult, err error) (*job.JobResult, error) {
 	jr.Status = types.ERROR
 	jr.UpdatedAt = time.Now()
-	jr.Logs = append(jr.Logs, job.Log{Timestamp: time.Now(), Message: fmt.Sprintf("error while running job %s: %v", jr.Key, err)})
+	jr.Logs = append(jr.Logs, NewLog(fmt.Sprintf("error while running job %s: %v", jr.Key, err)))
 	return jr, err
 }
 
