@@ -13,6 +13,8 @@ const execute = async (db, context = {}) => {
       endpoint:
         'https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz',
       separator: '\t',
+      gzip: true,
+      parallelism: 8,
     },
   };
 

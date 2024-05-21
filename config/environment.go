@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	stdLog "log"
 	"os"
 	"strconv"
 	"strings"
@@ -66,7 +67,7 @@ func logLevel(level string) log.Lvl {
 	case "OFF":
 		lvl = log.OFF
 	default:
-		fmt.Println("warning! invalid log level:", level)
+		stdLog.Println("warning! invalid log level:", level)
 		lvl = log.INFO
 	}
 	return lvl
@@ -76,7 +77,7 @@ func loadBoolOrDefault(key string, defaultValue bool) bool {
 	value := loadEnvOrDefault(key, fmt.Sprint(defaultValue))
 	b, err := strconv.ParseBool(value)
 	if err != nil {
-		fmt.Println("warning! invalid key value (bool conversion):", key)
+		stdLog.Println("warning! invalid key value (bool conversion):", key)
 		return defaultValue
 	}
 	return b
@@ -86,7 +87,7 @@ func loadIntEnvOrDefault(key string, defaultValue int) int {
 	value := loadEnvOrDefault(key, fmt.Sprint(defaultValue))
 	num, err := strconv.Atoi(value)
 	if err != nil {
-		fmt.Println("warning! invalid key value (int conversion):", key)
+		stdLog.Println("warning! invalid key value (int conversion):", key)
 		return defaultValue
 	}
 	return num
@@ -101,7 +102,7 @@ func env(envType string) EnvType {
 	case "PRODUCTION":
 		return PRODUCTION
 	default:
-		fmt.Println("warning! invalid env type:", envType)
+		stdLog.Println("warning! invalid env type:", envType)
 		return DEVELOPMENT
 
 	}

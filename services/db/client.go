@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"github.com/nbittich/factsfood/config"
@@ -16,7 +17,7 @@ import (
 var DB *mongo.Client
 
 func init() {
-	fmt.Println("connecting to mongo db...")
+	log.Println("connecting to mongo db...")
 	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s", config.MongoUser, config.MongoPassword, config.MongoHost, config.MongoPort)
 	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
 	defer cancel()
@@ -27,7 +28,7 @@ func init() {
 	if err = client.Ping(ctx, nil); err != nil {
 		panic(fmt.Sprintf("could not ping mongo:\n %s", err.Error()))
 	}
-	fmt.Printf("connected!")
+	log.Printf("connected!")
 	DB = client
 }
 
@@ -55,7 +56,7 @@ func Exist(ctx context.Context, filter bson.M, collection *mongo.Collection) (bo
 		if err == mongo.ErrNoDocuments {
 			return false, nil
 		} else {
-			fmt.Printf("could not call exists, maybe a bug? %s", err)
+			log.Printf("could not call exists, maybe a bug? %s", err)
 			return false, err
 		}
 	}

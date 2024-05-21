@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -82,13 +83,13 @@ func sendActivationEmail(user *types.User, createUser bool) {
 	if createUser {
 		_, e := db.InsertOrUpdate(ctx, user, collection)
 		if e != nil {
-			fmt.Println("could not create user:", e)
+			log.Println("could not create user:", e)
 			return
 		}
 	}
 	activateURL, e := GenerateActivateURL(ctx, config.BaseURL+"/users/activate", user.ID)
 	if e != nil {
-		fmt.Println("error while generating validation url", e)
+		log.Println("error while generating validation url", e)
 		return
 	}
 	email.SendAsync([]string{user.Email}, []string{}, "Activate your account", fmt.Sprintf(`<a href="%s">Activate your account now!</p>`, activateURL))
@@ -124,7 +125,7 @@ func ActivateUser(ctx context.Context, hash string) (bool, error) {
 	now := time.Now()
 	duration := now.Sub(userActivationURL.UpdatedAt)
 	if duration > config.ActivationExpiration {
-		fmt.Println("activation link no longer valid")
+		log.Println("activation link no longer valid")
 		go sendActivationEmail(&user, false)
 		return false, fmt.Errorf("invalid hash")
 	}
@@ -157,7 +158,7 @@ func GenerateActivateURL(ctx context.Context, baseURL string, userID string) (st
 		now := time.Now()
 		duration := now.Sub(userActivationURL.UpdatedAt)
 		if duration < config.ActivationExpiration {
-			fmt.Println("activation link still valid")
+			log.Println("activation link still valid")
 			return userActivationURL.GenerateURL(baseURL), nil
 		}
 	}

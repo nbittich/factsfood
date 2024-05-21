@@ -1,41 +1,47 @@
 package jobs
 
 import (
+	"compress/gzip"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/nbittich/factsfood/types"
 	"github.com/nbittich/factsfood/types/job"
 )
 
-func DownloadFile(endpoint string, filepath string) error {
+func DownloadFile(endpoint string, filepath string, gzipped bool) (int64, error) {
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
-	}
-
-	if ct := resp.Header.Get(echo.HeaderContentType); ct != echo.MIMEOctetStream {
-		return fmt.Errorf("bad content type: %s", ct)
+		return 0, fmt.Errorf("bad status: %s", resp.Status)
 	}
 
 	out, err := os.Create(filepath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer out.Close()
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return err
+
+	reader := resp.Body
+
+	if gzipped {
+		if reader, err = gzip.NewReader(resp.Body); err != nil {
+			return 0, err
+		}
 	}
-	return nil
+	defer reader.Close()
+
+	_, err = io.Copy(out, reader)
+	if err != nil {
+		return 0, err
+	}
+
+	return resp.ContentLength, nil
 }
 
 func StatusError(jr *job.JobResult, err error) (*job.JobResult, error) {
