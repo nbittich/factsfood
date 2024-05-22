@@ -37,7 +37,7 @@ func (is InitialSync) process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		Key:       job.Key,
 		Status:    types.ERROR,
 		CreatedAt: time.Now(),
-		Logs:      make([]jobTypes.Log, 10),
+		Logs:      make([]jobTypes.Log, 0, 10),
 	}
 	if job.Disabled {
 		return jobs.StatusError(&jr, jobTypes.DISABLED)
@@ -184,7 +184,7 @@ func mongoSinkWorker(ctx context.Context, wg *sync.WaitGroup, off offType.OpenFo
 
 func csvWorker(wp workerParam) {
 	defer wp.wg.Done()
-	buf := make([]byte, 131_072) // 128kb buffer
+	buf := make([]byte, 0, 131_072) // 128kb buffer
 	select {
 	case <-wp.ctx.Done():
 		log.Println("CSV Goroutine cancelled")
@@ -204,7 +204,7 @@ func csvWorker(wp workerParam) {
 				wp.wg.Add(1)
 				go mongoSinkWorker(wp.ctx, wp.wg, entry, wp.errCh)
 				// clear buf
-				clear(buf)
+				buf = buf[:0]
 			} else {
 				buf = append(buf, v)
 			}

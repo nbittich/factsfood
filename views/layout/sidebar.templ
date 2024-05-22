@@ -39,7 +39,7 @@ var menuLinks = [...]MenuLink{
 }*/
 
 func getMenuLinks(ctx context.Context) []MenuLink {
-	menuLinks := make([]MenuLink, 10)
+	menuLinks := make([]MenuLink, 0, 10)
 	if _, ok := ctx.Value(types.UserKey).(types.UserClaims); ok {
 		menuLinks = append(menuLinks, MenuLink{"/users/logout", "bi-box-arrow-right", utils.T(ctx, "common.logout")})
 	}
