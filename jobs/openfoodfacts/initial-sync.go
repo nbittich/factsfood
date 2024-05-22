@@ -1,19 +1,25 @@
 package openfoodfacts
 
 import (
+	"bytes"
+	"encoding/csv"
 	"fmt"
 	"log"
 	"os"
 	"path"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/edsrzf/mmap-go"
 	"github.com/google/uuid"
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/jobs"
+	"github.com/nbittich/factsfood/services/db"
 	"github.com/nbittich/factsfood/types"
 	jobTypes "github.com/nbittich/factsfood/types/job"
+	offType "github.com/nbittich/factsfood/types/openfoodfacts"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -43,7 +49,7 @@ func (is InitialSync) process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		return jobs.StatusError(&jr, jobTypes.INVALIDPARAM)
 	}
 
-	separator, ok := job.Params[csvSeparatorKey].(string)
+	separator, ok := job.Params[csvSeparatorKey].(rune)
 	if !ok {
 		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid endpoint param %s: %s", csvSeparatorKey, job.Params)))
 		return jobs.StatusError(&jr, jobTypes.INVALIDPARAM)
@@ -84,9 +90,14 @@ func (is InitialSync) process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		return jobs.StatusError(&jr, err)
 	}
 
-	var offset int64 = 0
-	maxChunkSize := fileLen / int64(parallelism)
+	offset := headerLine(data) // skip header line
+	maxChunkSize := (fileLen - offset) / int64(parallelism)
 	maxChunkSize -= maxChunkSize - 4096 // 4k page
+	var wg sync.WaitGroup
+	ch := make(chan error, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%b' separator", separator)))
 
 	for offset < fileLen {
 		end := offset + maxChunkSize
@@ -95,13 +106,34 @@ func (is InitialSync) process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		}
 
 		currentLastNewLine := offset + int64(lastNewline(data[offset:end]))
+		wg.Add(1)
 
-		go func() {
-			log.Println(currentLastNewLine) // todo
-		}()
+		go csvWorker(workerParam{
+			ctx:                ctx,
+			offset:             offset,
+			separator:          separator,
+			currentLastNewLine: currentLastNewLine,
+			data:               data,
+			wg:                 &wg,
+			errCh:              ch,
+		})
+		offset = currentLastNewLine
 	}
 
-	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%s' separator", separator)))
+	go func() {
+		wg.Wait()
+
+		close(ch)
+	}()
+
+	for e := range ch {
+		if e != nil {
+			cancel()
+			return jobs.StatusError(&jr, e)
+		}
+	}
+	jr.Status = types.SUCCESS
+	jr.UpdatedAt = time.Now()
 
 	return &jr, nil
 }
@@ -115,4 +147,67 @@ func lastNewline(s []byte) int {
 		i -= 1
 	}
 	return len(s)
+}
+
+func headerLine(s []byte) int64 {
+	i := 0
+	for s[i] != '\n' {
+		i++
+	}
+	return int64(i + 1)
+}
+
+type workerParam struct {
+	ctx                context.Context
+	offset             int64
+	separator          rune
+	currentLastNewLine int64
+	data               []byte
+	wg                 *sync.WaitGroup
+	errCh              chan error
+}
+
+func mongoSinkWorker(ctx context.Context, wg *sync.WaitGroup, off offType.OpenFoodFactCSVEntry, errChan chan error) {
+	defer wg.Done()
+	select {
+	case <-ctx.Done():
+		log.Println("Sink Channel closed")
+		return
+	default:
+		col := db.GetCollection("openfoodfacts")
+		if _, err := db.InsertOrUpdate(ctx, &off, col); err != nil {
+			errChan <- err
+			return
+		}
+	}
+}
+
+func csvWorker(wp workerParam) {
+	defer wp.wg.Done()
+	buf := make([]byte, 131_072) // 128kb buffer
+	select {
+	case <-wp.ctx.Done():
+		log.Println("CSV Goroutine cancelled")
+		return
+	default:
+		for _, v := range wp.data[wp.offset:wp.currentLastNewLine] {
+			if v == '\n' {
+				// process buf
+				csvReader := csv.NewReader(bytes.NewReader(buf))
+				csvReader.Comma = wp.separator
+				entry := offType.OpenFoodFactCSVEntry{}
+				err := jobs.UnmarshalCSV(csvReader, &entry)
+				if err != nil {
+					wp.errCh <- err
+					break
+				}
+				wp.wg.Add(1)
+				go mongoSinkWorker(wp.ctx, wp.wg, entry, wp.errCh)
+				// clear buf
+				clear(buf)
+			} else {
+				buf = append(buf, v)
+			}
+		}
+	}
 }
