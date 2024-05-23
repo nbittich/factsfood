@@ -42,7 +42,7 @@ func Start() {
 	for {
 		jobs, err := getEnabledAndNonRunningJobs()
 		if err != nil {
-			log.Fatal("could not load jobs:", err)
+			log.Println("could not load jobs:", err)
 		}
 		for _, j := range jobs {
 			processor, ok := jobProcessors[j.Key]
@@ -52,10 +52,9 @@ func Start() {
 			}
 			wg.Add(1)
 			go process(&wg, &j, processor)
-
 		}
 		wg.Wait() // make sure that all jobs are set to running
-		time.Sleep(time.Second)
+		time.Sleep(time.Minute)
 	}
 }
 

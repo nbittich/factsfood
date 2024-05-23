@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/edsrzf/mmap-go"
+	"github.com/gocarina/gocsv"
 	"github.com/google/uuid"
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/jobs"
@@ -117,7 +118,7 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		currentLastNewLine := offset + int64(lastNewline(data[offset:end]))
 		wg.Add(1)
 
-		go csvWorker(workerParam{
+		go worker(workerParam{
 			ctx:                ctx,
 			offset:             offset,
 			separator:          separator,
@@ -175,22 +176,7 @@ type workerParam struct {
 	errCh              chan error
 }
 
-func mongoSinkWorker(ctx context.Context, wg *sync.WaitGroup, off offType.OpenFoodFactCSVEntry, errChan chan error) {
-	defer wg.Done()
-	select {
-	case <-ctx.Done():
-		log.Println("Sink Channel closed")
-		return
-	default:
-		col := db.GetCollection("openfoodfacts")
-		if _, err := db.InsertOrUpdate(ctx, &off, col); err != nil {
-			errChan <- err
-			return
-		}
-	}
-}
-
-func csvWorker(wp workerParam) {
+func worker(wp workerParam) {
 	defer wp.wg.Done()
 	buf := make([]byte, 0, 131_072) // 128kb buffer
 	select {
@@ -198,19 +184,27 @@ func csvWorker(wp workerParam) {
 		log.Println("CSV Goroutine cancelled")
 		return
 	default:
+		entry := make([]offType.OpenFoodFactCSVEntry, 0, 1)
 		for _, v := range wp.data[wp.offset:wp.currentLastNewLine] {
 			if v == '\n' {
 				// process buf
 				csvReader := csv.NewReader(bytes.NewReader(buf))
 				csvReader.Comma = wp.separator
-				entry := offType.OpenFoodFactCSVEntry{}
-				err := jobs.UnmarshalCSV(csvReader, &entry)
+				err := gocsv.UnmarshalCSVWithoutHeaders(csvReader, &entry)
 				if err != nil {
 					wp.errCh <- err
 					break
 				}
-				wp.wg.Add(1)
-				go mongoSinkWorker(wp.ctx, wp.wg, entry, wp.errCh)
+				if len(entry) != 1 {
+					wp.errCh <- fmt.Errorf("len of entry != 1: %d. %v", len(entry), entry)
+					break
+				}
+				col := db.GetCollection("openfoodfacts")
+				if _, err := db.InsertOrUpdate(wp.ctx, &entry[0], col); err != nil {
+					wp.errCh <- err
+					return
+				}
+				entry = entry[:0] // reset entry
 				// clear buf
 				buf = buf[:0]
 			} else {
