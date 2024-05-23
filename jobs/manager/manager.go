@@ -65,6 +65,7 @@ func process(wg *sync.WaitGroup, j *job.Job, processor job.JobProcessor) {
 		nextTick, err := gronx.NextTick(j.CronExpression, true)
 		if err != nil {
 			log.Println("could not get next tick: ", err)
+			wg.Done()
 			return
 		}
 		nextSchedule = nextTick
