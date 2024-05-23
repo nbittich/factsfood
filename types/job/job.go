@@ -11,6 +11,7 @@ type JobError uint8
 const (
 	DISABLED JobError = iota + 1
 	INVALIDPARAM
+	BADKEY
 )
 
 func (j JobError) Error() string {
@@ -19,6 +20,8 @@ func (j JobError) Error() string {
 		return "job disabled"
 	case INVALIDPARAM:
 		return "missing or invalid param in job config"
+	case BADKEY:
+		return "bad key"
 	default:
 		return "unknown job error"
 
@@ -52,8 +55,8 @@ type JobParams map[string]interface{}
 type Job struct {
 	ID             string    `bson:"_id" json:"_id"`
 	CronExpression string    `json:"cronExpression"`
-	NextSchedule   time.Time `json:"nextSchedule"`
 	SpecificDate   time.Time `json:"specificDate"`
+	Running        bool      `json:"isRunning"`
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`
 	Key            string    `json:"key"`

@@ -1,20 +1,22 @@
 const KEY = 'OFF_INITIAL_SYNC_JOB';
 const execute = async (db, context = {}) => {
-  const { now, uuid } = context;
+  const {  uuid } = context;
   const job = {
     _id: uuid(),
     // cronExpression: "0 0 0 * * *",
-    createdAt: now(),
-    specificDate: now(),
+    createdAt: new Date(),
+    specificDate: new Date(),
     key: KEY,
     name: 'OpenFoodFacts: Initial Sync',
     description: 'fill the FF database with OF data, using gzipped CSV',
+    running: false,
+    disabled: false,
     params: {
       endpoint:
         'https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz',
-      separator: '\t',
+      separator: "\t",
       gzip: true,
-      parallelism: 8,
+      parallelism: 8
     },
   };
 

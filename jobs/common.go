@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -52,6 +53,7 @@ func StatusError(jr *job.JobResult, err error) (*job.JobResult, error) {
 }
 
 func NewLog(msg string) job.Log {
+	log.Println(msg)
 	return job.Log{
 		Timestamp: time.Now(),
 		Message:   msg,

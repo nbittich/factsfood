@@ -6,6 +6,7 @@ require github.com/BurntSushi/toml v1.3.2
 
 require (
 	github.com/a-h/templ v0.2.663 // indirect
+	github.com/adhocore/gronx v1.8.1 // indirect
 	github.com/edsrzf/mmap-go v1.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect

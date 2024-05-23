@@ -71,8 +71,33 @@ func FindOneBy[T types.HasID](ctx context.Context, filter bson.M, collection *mo
 	return *ptr, err
 }
 
+func Find[T types.HasID](ctx context.Context, filter interface{}, collection *mongo.Collection) ([]T, error) {
+	cursor, err := collection.Find(ctx, filter, &options.FindOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	results := make([]T, 0, 100)
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func FindAll[T types.HasID](ctx context.Context, collection *mongo.Collection) ([]T, error) {
+	return Find[T](ctx, &bson.D{}, collection)
+}
+
 func FindOneByID[T types.HasID](ctx context.Context, collection *mongo.Collection, id string) (T, error) {
 	return FindOneBy[T](ctx, FilterByID(id), collection)
+}
+
+func Save[T types.Identifiable](entity T, col *mongo.Collection) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
+	defer cancel()
+	return InsertOrUpdate(ctx, entity, col)
 }
 
 func InsertOrUpdate(ctx context.Context, entity types.Identifiable, collection *mongo.Collection) (string, error) {

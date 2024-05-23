@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -11,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/handlers"
+	"github.com/nbittich/factsfood/jobs/manager"
 	ffMidleware "github.com/nbittich/factsfood/middleware"
 	"github.com/nbittich/factsfood/services/db"
 	"github.com/nbittich/factsfood/services/email"
@@ -82,6 +84,10 @@ func main() {
 			}
 		}
 	}()
+
+	log.Println("starting job manager")
+	go manager.Start()
+	fmt.Println()
 
 	fmt.Println(BANNER)
 

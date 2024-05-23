@@ -23,16 +23,16 @@ import (
 )
 
 const (
-	jobKey           = "OFF_INITIAL_SYNC_JOB"
-	endpointParamKey = "endpoint"
-	csvSeparatorKey  = "separator"
-	gzipKey          = "gzip"
-	parallelismKey   = "parallelism"
+	InitialSyncJobKey = "OFF_INITIAL_SYNC_JOB"
+	endpointParamKey  = "endpoint"
+	csvSeparatorKey   = "separator"
+	gzipKey           = "gzip"
+	parallelismKey    = "parallelism"
 )
 
 type InitialSync struct{}
 
-func (is InitialSync) process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
+func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	jr := jobTypes.JobResult{
 		Key:       job.Key,
 		Status:    types.ERROR,
@@ -42,18 +42,24 @@ func (is InitialSync) process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	if job.Disabled {
 		return jobs.StatusError(&jr, jobTypes.DISABLED)
 	}
+
+	if job.Key != InitialSyncJobKey {
+		return jobs.StatusError(&jr, jobTypes.BADKEY)
+	}
+
 	endpoint, ok := job.Params[endpointParamKey].(string)
 
 	if !ok {
-		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid endpoint param %s: %s", endpointParamKey, job.Params)))
+		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid endpoint param %s: %v", endpointParamKey, job.Params)))
 		return jobs.StatusError(&jr, jobTypes.INVALIDPARAM)
 	}
 
-	separator, ok := job.Params[csvSeparatorKey].(rune)
-	if !ok {
-		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid endpoint param %s: %s", csvSeparatorKey, job.Params)))
+	separatorStr, ok := job.Params[csvSeparatorKey].(string)
+	if !ok || len(separatorStr) != 1 {
+		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid separator param %s: %v", csvSeparatorKey, job.Params)))
 		return jobs.StatusError(&jr, jobTypes.INVALIDPARAM)
 	}
+	separator := []rune(separatorStr)[0]
 
 	gzipped, ok := job.Params[gzipKey].(bool)
 	if !ok {
@@ -61,14 +67,17 @@ func (is InitialSync) process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		gzipped = false
 	}
 
-	parallelism, ok := job.Params[parallelismKey].(int)
+	var parallelism int
+	parallelismI32, ok := job.Params[parallelismKey].(int32)
 	if !ok {
 		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing or invalid parallelism param. fallback to thread counts"))
 		parallelism = runtime.NumCPU()
+	} else {
+		parallelism = int(parallelismI32)
 	}
 
 	tempPath := path.Join(config.TempDir, fmt.Sprintf("%s.csv", uuid.New().String()))
-	jr.Logs = append(jr.Logs, jobTypes.Log{Timestamp: time.Now(), Message: fmt.Sprintf("downloading CSV from %s and saved to %s", endpoint, tempPath)})
+	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("downloading CSV from %s and saved to %s", endpoint, tempPath)))
 
 	fileLen, err := jobs.DownloadFile(endpoint, tempPath, gzipped)
 	if err != nil {
@@ -122,7 +131,6 @@ func (is InitialSync) process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 
 	go func() {
 		wg.Wait()
-
 		close(ch)
 	}()
 
