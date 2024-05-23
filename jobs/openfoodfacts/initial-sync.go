@@ -106,7 +106,7 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	ch := make(chan error, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%b' separator", separator)))
+	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%c' separator", separator)))
 
 	for offset < fileLen {
 		end := offset + maxChunkSize
