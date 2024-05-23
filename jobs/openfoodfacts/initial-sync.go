@@ -102,12 +102,14 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 
 	offset := headerLine(data) // skip header line
 	maxChunkSize := (fileLen - offset) / int64(parallelism)
-	maxChunkSize -= maxChunkSize - 4096 // 4k page
+	maxChunkSize -= 4096 // 4k page
 	var wg sync.WaitGroup
 	ch := make(chan error, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%c' separator", separator)))
+
+	countGoroutines := 0
 
 	for offset < fileLen {
 		end := offset + maxChunkSize
@@ -119,6 +121,8 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		partition := data[offset:currentLastNewLine]
 		wg.Add(1)
 
+		countGoroutines += 1
+		log.Printf("spawning goroutine #%d\n", countGoroutines)
 		go worker(workerParam{
 			ctx:       ctx,
 			separator: separator,
@@ -142,6 +146,7 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	}
 	jr.Status = types.SUCCESS
 	jr.UpdatedAt = time.Now()
+	jr.Logs = append(jr.Logs, jobs.NewLog("initial sync finished"))
 
 	return &jr, nil
 }
