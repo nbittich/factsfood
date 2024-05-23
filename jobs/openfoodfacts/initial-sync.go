@@ -116,16 +116,15 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		}
 
 		currentLastNewLine := offset + int64(lastNewline(data[offset:end]))
+		partition := data[offset:currentLastNewLine]
 		wg.Add(1)
 
 		go worker(workerParam{
-			ctx:                ctx,
-			offset:             offset,
-			separator:          separator,
-			currentLastNewLine: currentLastNewLine,
-			data:               data,
-			wg:                 &wg,
-			errCh:              ch,
+			ctx:       ctx,
+			separator: separator,
+			data:      partition,
+			wg:        &wg,
+			errCh:     ch,
 		})
 		offset = currentLastNewLine
 	}
@@ -167,49 +166,64 @@ func headerLine(s []byte) int64 {
 }
 
 type workerParam struct {
-	ctx                context.Context
-	offset             int64
-	separator          rune
-	currentLastNewLine int64
-	data               []byte
-	wg                 *sync.WaitGroup
-	errCh              chan error
+	ctx       context.Context
+	separator rune
+	data      []byte
+	wg        *sync.WaitGroup
+	errCh     chan error
 }
 
 func worker(wp workerParam) {
 	defer wp.wg.Done()
+	batchSize := 100
 	buf := make([]byte, 0, 131_072) // 128kb buffer
-	select {
-	case <-wp.ctx.Done():
-		log.Println("CSV Goroutine cancelled")
-		return
-	default:
-		entry := make([]offType.OpenFoodFactCSVEntry, 0, 1)
-		for _, v := range wp.data[wp.offset:wp.currentLastNewLine] {
+	batch := make([]types.Identifiable, 0, batchSize)
+	col := db.GetCollection("openfoodfacts")
+	out := make([]*offType.OpenFoodFactCSVEntry, 0, 1) // only to please gocsv
+
+	for _, v := range wp.data {
+		select {
+		case <-wp.ctx.Done():
+			log.Println("CSV Goroutine cancelled")
+			return
+		default:
+			if len(batch) == batchSize {
+				// flush
+				if err := db.InsertMany(wp.ctx, batch, col); err != nil {
+					wp.errCh <- err
+					return
+				}
+				batch = batch[:0]
+			}
 			if v == '\n' {
 				// process buf
 				csvReader := csv.NewReader(bytes.NewReader(buf))
 				csvReader.Comma = wp.separator
-				err := gocsv.UnmarshalCSVWithoutHeaders(csvReader, &entry)
+				err := gocsv.UnmarshalCSVWithoutHeaders(csvReader, &out)
 				if err != nil {
-					wp.errCh <- err
-					break
+					log.Println("warning! error in row:", string(buf))
+				} else {
+					if len(out) != 1 {
+						wp.errCh <- fmt.Errorf("len of entry != 1: %d. %v", len(out), out)
+						break
+					}
+					batch = append(batch, out[0])
+
 				}
-				if len(entry) != 1 {
-					wp.errCh <- fmt.Errorf("len of entry != 1: %d. %v", len(entry), entry)
-					break
-				}
-				col := db.GetCollection("openfoodfacts")
-				if _, err := db.InsertOrUpdate(wp.ctx, &entry[0], col); err != nil {
-					wp.errCh <- err
-					return
-				}
-				entry = entry[:0] // reset entry
-				// clear buf
+				// clear buffers
 				buf = buf[:0]
+				out = out[:0]
 			} else {
 				buf = append(buf, v)
 			}
+
+		}
+	}
+	if len(batch) > 0 {
+		// final flush
+		if err := db.InsertMany(wp.ctx, batch, col); err != nil {
+			wp.errCh <- err
+			return
 		}
 	}
 }

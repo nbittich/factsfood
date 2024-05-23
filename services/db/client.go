@@ -100,6 +100,20 @@ func Save[T types.Identifiable](entity T, col *mongo.Collection) (string, error)
 	return InsertOrUpdate(ctx, entity, col)
 }
 
+func InsertMany(ctx context.Context, entities []types.Identifiable, collection *mongo.Collection) error {
+	documents := make([]interface{}, 0, len(entities))
+
+	for _, entity := range entities {
+		id := entity.GetID()
+		if id == "" {
+			entity.SetID(uuid.New().String())
+		}
+		documents = append(documents, entity)
+	}
+	_, err := collection.InsertMany(ctx, documents, &options.InsertManyOptions{})
+	return err
+}
+
 func InsertOrUpdate(ctx context.Context, entity types.Identifiable, collection *mongo.Collection) (string, error) {
 	var err error
 	id := entity.GetID()
