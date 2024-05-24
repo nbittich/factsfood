@@ -33,7 +33,13 @@ const (
 
 type InitialSync struct{}
 
+type FailedCSVLine struct {
+	Line  string `json:"line"`
+	Error string `json:"error"`
+}
+
 func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
+	failedCsvLine := make([]*FailedCSVLine, 0, 1024)
 	jr := jobTypes.JobResult{
 		Key:       job.Key,
 		Status:    types.ERROR,
@@ -96,15 +102,18 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	}
 	defer f.Close()
 	data, err := mmap.Map(f, mmap.RDONLY, 0)
+	defer data.Unmap()
+
 	if err != nil {
 		return jobs.StatusError(&jr, err)
 	}
 
 	offset := headerLine(data) // skip header line
 	maxChunkSize := (fileLen - offset) / int64(parallelism)
-	maxChunkSize -= 4096 // 4k page
+	maxChunkSize -= maxChunkSize % 4096 // 4k page
 	var wg sync.WaitGroup
-	ch := make(chan error, 1)
+	errorChan := make(chan error, 1)
+	warningChan := make(chan FailedCSVLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%c' separator", separator)))
@@ -128,23 +137,44 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 			separator: separator,
 			data:      partition,
 			wg:        &wg,
-			errCh:     ch,
+			errCh:     errorChan,
+			warningCh: warningChan,
 		})
 		offset = currentLastNewLine
 	}
 
 	go func() {
 		wg.Wait()
-		close(ch)
+		close(errorChan)
+		close(warningChan)
 	}()
 
-	for e := range ch {
-		if e != nil {
-			cancel()
-			return jobs.StatusError(&jr, e)
+	for errorChan != nil || warningChan != nil {
+		select {
+		case e, ok := <-errorChan:
+			if ok {
+				if e != nil {
+					cancel()
+					return jobs.StatusError(&jr, e)
+				}
+			} else {
+				errorChan = nil
+			}
+		case w, ok := <-warningChan:
+			if ok {
+				failedCsvLine = append(failedCsvLine, &w)
+			} else {
+				warningChan = nil
+			}
 		}
 	}
+
 	jr.Status = types.SUCCESS
+	if len(failedCsvLine) > 0 {
+		metadata := make(map[string]interface{}, 1)
+		metadata["failedCsvLines"] = failedCsvLine
+		jr.Metadata = metadata
+	}
 	jr.UpdatedAt = time.Now()
 	jr.Logs = append(jr.Logs, jobs.NewLog("initial sync finished"))
 
@@ -176,6 +206,7 @@ type workerParam struct {
 	data      []byte
 	wg        *sync.WaitGroup
 	errCh     chan error
+	warningCh chan FailedCSVLine
 }
 
 func worker(wp workerParam) {
@@ -206,7 +237,10 @@ func worker(wp workerParam) {
 				csvReader.Comma = wp.separator
 				err := gocsv.UnmarshalCSVWithoutHeaders(csvReader, &out)
 				if err != nil {
-					log.Println("warning! error in row:", string(buf))
+					wp.warningCh <- FailedCSVLine{
+						Line:  string(buf),
+						Error: err.Error(),
+					}
 				} else {
 					if len(out) != 1 {
 						wp.errCh <- fmt.Errorf("len of entry != 1: %d. %v", len(out), out)

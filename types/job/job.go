@@ -29,12 +29,13 @@ func (j JobError) Error() string {
 }
 
 type JobResult struct {
-	ID        string           `bson:"_id" json:"_id"`
-	Key       string           `json:"key"`
-	CreatedAt time.Time        `json:"createdAt"`
-	UpdatedAt time.Time        `json:"updatedAt"`
-	Status    types.StatusType `json:"status"`
-	Logs      []Log            `json:"logs"`
+	ID        string                 `bson:"_id" json:"_id"`
+	Key       string                 `json:"key"`
+	CreatedAt time.Time              `json:"createdAt"`
+	UpdatedAt time.Time              `json:"updatedAt"`
+	Status    types.StatusType       `json:"status"`
+	Logs      []Log                  `json:"logs"`
+	Metadata  map[string]interface{} `json:"metadata"`
 }
 
 type Log struct {
