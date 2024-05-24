@@ -24,6 +24,7 @@ func main() {
 		if field == "code" {
 			s += fmt.Sprintf("%s string `json:\"_id\" bson:\"_id\"`\n", strings.Join(temp, ""))
 		} else {
+			f := fmt.Sprintf("\"%s,omitempty\"", field)
 			t := "string"
 			if strings.HasSuffix(field, "_t") ||
 				strings.HasSuffix(field, "_100g") ||
@@ -31,7 +32,14 @@ func main() {
 				strings.HasSuffix(field, "_n") {
 				t = "int"
 			}
-			s += fmt.Sprintf("%s %s `json:\"%s,omitempty\" bson:\"%s,omitempty\"`\n", strings.Join(temp, ""), t, field, field)
+
+			if strings.HasSuffix(field, "_datetime") {
+				t = "time.Time"
+			}
+			if field == "creator" {
+				f = "\"-\""
+			}
+			s += fmt.Sprintf("%s %s `json:%s bson:%s`\n", strings.Join(temp, ""), t, f, f)
 		}
 	}
 	s += "}\n"

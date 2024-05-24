@@ -16,7 +16,8 @@ import (
 func printProgressDownloadFile(done chan int64, path string, total int64) {
 	stop := false
 	// give it some time to kick in
-	time.Sleep(time.Second * 5)
+	log.Println("Download started.")
+	time.Sleep(time.Second * 3)
 	file, err := os.Open(path)
 	if err != nil {
 		log.Println("cannot show progress bar:", err)
@@ -37,7 +38,8 @@ func printProgressDownloadFile(done chan int64, path string, total int64) {
 			}
 			size := fi.Size()
 			percent := float64(size) / float64(total) * 100
-			fmt.Printf("\rDownload Progress: %.0f%%", percent)
+
+			log.Printf("\rDownload Progress: %.0f%%", percent)
 		}
 		time.Sleep(time.Second * 1)
 		if stop {
@@ -71,7 +73,8 @@ func DownloadFile(endpoint string, filepath string, gzipped bool) (int64, error)
 	defer reader.Close()
 	done := make(chan int64)
 	go printProgressDownloadFile(done, filepath, resp.ContentLength)
-	_, err = io.Copy(out, reader)
+	s, err := io.Copy(out, reader)
+	done <- s
 	if err != nil {
 		return 0, err
 	}

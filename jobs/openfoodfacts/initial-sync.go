@@ -39,7 +39,7 @@ type FailedCSVLine struct {
 }
 
 func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
-	failedCsvLine := make([]*FailedCSVLine, 0, 1024)
+	failedCsvLine := make([]*FailedCSVLine, 0, 256)
 	jr := jobTypes.JobResult{
 		Key:       job.Key,
 		Status:    types.ERROR,
@@ -149,6 +149,7 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		close(warningChan)
 	}()
 
+	stopWritingWarnings := false
 	for errorChan != nil || warningChan != nil {
 		select {
 		case e, ok := <-errorChan:
@@ -162,7 +163,15 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 			}
 		case w, ok := <-warningChan:
 			if ok {
-				failedCsvLine = append(failedCsvLine, &w)
+				if cap(failedCsvLine) == len(failedCsvLine) && !stopWritingWarnings {
+					log.Println("capacity of warnings reached, fallback to logging instead")
+					stopWritingWarnings = true
+				}
+				if stopWritingWarnings {
+					log.Printf("error in unmarshalling csv: %s \t\nline: %s\n", w.Error, w.Line)
+				} else {
+					failedCsvLine = append(failedCsvLine, &w)
+				}
 			} else {
 				warningChan = nil
 			}
