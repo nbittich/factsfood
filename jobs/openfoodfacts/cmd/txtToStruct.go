@@ -24,7 +24,11 @@ func main() {
 		if field == "code" {
 			s += fmt.Sprintf("%s string `json:\"_id\" bson:\"_id\"`\n", strings.Join(temp, ""))
 		} else {
-			s += fmt.Sprintf("%s string `json:\"%s,omitempty\" bson:\"%s,omitempty\"`\n", strings.Join(temp, ""), field, field)
+			t := "string"
+			if strings.HasSuffix(field, "_t") || strings.HasSuffix(field, "_100g") || strings.HasSuffix(field, "_serving") {
+				t = "int"
+			}
+			s += fmt.Sprintf("%s %s `json:\"%s,omitempty\" bson:\"%s,omitempty\"`\n", strings.Join(temp, ""), t, field, field)
 		}
 	}
 	s += "}\n"
