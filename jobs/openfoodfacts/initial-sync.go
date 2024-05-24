@@ -225,7 +225,7 @@ func worker(wp workerParam) {
 		default:
 			if len(batch) == batchSize {
 				// flush
-				if err := db.InsertMany(wp.ctx, batch, col); err != nil {
+				if err := db.InsertOrUpdateMany(wp.ctx, batch, col); err != nil {
 					wp.errCh <- err
 					return
 				}
@@ -260,7 +260,7 @@ func worker(wp workerParam) {
 	}
 	if len(batch) > 0 {
 		// final flush
-		if err := db.InsertMany(wp.ctx, batch, col); err != nil {
+		if err := db.InsertOrUpdateMany(wp.ctx, batch, col); err != nil {
 			wp.errCh <- err
 			return
 		}

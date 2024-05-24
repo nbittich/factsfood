@@ -100,17 +100,17 @@ func Save[T types.Identifiable](entity T, col *mongo.Collection) (string, error)
 	return InsertOrUpdate(ctx, entity, col)
 }
 
-func InsertMany(ctx context.Context, entities []types.Identifiable, collection *mongo.Collection) error {
-	documents := make([]interface{}, 0, len(entities))
-
+func InsertOrUpdateMany(ctx context.Context, entities []types.Identifiable, collection *mongo.Collection) error {
+	models := make([]mongo.WriteModel, 0, len(entities))
 	for _, entity := range entities {
-		id := entity.GetID()
-		if id == "" {
+		if entity.GetID() == "" {
 			entity.SetID(uuid.New().String())
+			models = append(models, mongo.NewInsertOneModel().SetDocument(entity))
+		} else {
+			models = append(models, mongo.NewReplaceOneModel().SetUpsert(true).SetReplacement(entity).SetFilter(FilterByID(entity.GetID())))
 		}
-		documents = append(documents, entity)
 	}
-	_, err := collection.InsertMany(ctx, documents, &options.InsertManyOptions{})
+	_, err := collection.BulkWrite(ctx, models, &options.BulkWriteOptions{})
 	return err
 }
 
@@ -124,7 +124,9 @@ func InsertOrUpdate(ctx context.Context, entity types.Identifiable, collection *
 			return "", err
 		}
 	} else {
-		_, err = collection.ReplaceOne(ctx, FilterByID(entity.GetID()), entity, &options.ReplaceOptions{})
+		option := &options.ReplaceOptions{}
+		option.SetUpsert(true)
+		_, err = collection.ReplaceOne(ctx, FilterByID(entity.GetID()), entity, option)
 	}
 	return id, err
 }
