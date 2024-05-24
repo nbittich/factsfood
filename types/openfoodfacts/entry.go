@@ -53,7 +53,7 @@ type OpenFoodFactCSVEntry struct {
 	ServingSize                                     string `json:"serving_size,omitempty" bson:"serving_size,omitempty"`
 	ServingQuantity                                 string `json:"serving_quantity,omitempty" bson:"serving_quantity,omitempty"`
 	NoNutritionData                                 string `json:"no_nutrition_data,omitempty" bson:"no_nutrition_data,omitempty"`
-	AdditivesN                                      string `json:"additives_n,omitempty" bson:"additives_n,omitempty"`
+	AdditivesN                                      int    `json:"additives_n,omitempty" bson:"additives_n,omitempty"`
 	Additives                                       string `json:"additives,omitempty" bson:"additives,omitempty"`
 	AdditivesTags                                   string `json:"additives_tags,omitempty" bson:"additives_tags,omitempty"`
 	AdditivesEn                                     string `json:"additives_en,omitempty" bson:"additives_en,omitempty"`
@@ -75,7 +75,7 @@ type OpenFoodFactCSVEntry struct {
 	ProductQuantity                                 string `json:"product_quantity,omitempty" bson:"product_quantity,omitempty"`
 	Owner                                           string `json:"owner,omitempty" bson:"owner,omitempty"`
 	DataQualityErrorsTags                           string `json:"data_quality_errors_tags,omitempty" bson:"data_quality_errors_tags,omitempty"`
-	UniqueScansN                                    string `json:"unique_scans_n,omitempty" bson:"unique_scans_n,omitempty"`
+	UniqueScansN                                    int    `json:"unique_scans_n,omitempty" bson:"unique_scans_n,omitempty"`
 	PopularityTags                                  string `json:"popularity_tags,omitempty" bson:"popularity_tags,omitempty"`
 	Completeness                                    string `json:"completeness,omitempty" bson:"completeness,omitempty"`
 	LastImageT                                      int    `json:"last_image_t,omitempty" bson:"last_image_t,omitempty"`
