@@ -34,7 +34,7 @@ func main() {
 			}
 
 			if strings.HasSuffix(field, "_datetime") {
-				t = "time.Time"
+				t = "types.TimeISO8601"
 			}
 			if field == "creator" {
 				f = "\"-\""

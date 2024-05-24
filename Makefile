@@ -1,9 +1,12 @@
 MAIN=cmd/factsfood/server.go
 P=bin/ff
+FLAGS=-ldflags="-s -w"
 tpl:
 	@templ generate
 build: tpl
 	@go build -o $(P) $(MAIN)
+release: tpl
+	@go build -o $(P) $(FLAGS) $(MAIN)
 run: build
 	$(P)
 serve:

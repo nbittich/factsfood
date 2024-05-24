@@ -1,6 +1,9 @@
 package types
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 type HasID interface {
 	GetID() string
@@ -49,4 +52,16 @@ func (apiError InvalidFormError) Error() string {
 		return e.Error()
 	}
 	return string(val)
+}
+
+type TimeISO8601 struct {
+	time.Time
+}
+
+func (date *TimeISO8601) UnmarshalCSV(csv string) (err error) {
+	if csv == "" {
+		return nil
+	}
+	date.Time, err = time.Parse(time.RFC3339, csv)
+	return err
 }
