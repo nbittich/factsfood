@@ -14,6 +14,7 @@ import (
 	"github.com/edsrzf/mmap-go"
 	"github.com/gocarina/gocsv"
 	"github.com/google/uuid"
+	"github.com/mitchellh/mapstructure"
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/jobs"
 	"github.com/nbittich/factsfood/services/db"
@@ -38,6 +39,23 @@ type FailedCSVLine struct {
 	Error string `json:"error"`
 }
 
+type workerParam struct {
+	ctx       context.Context
+	separator rune
+	data      []byte
+	wg        *sync.WaitGroup
+	errCh     chan error
+	warningCh chan FailedCSVLine
+}
+
+type jobParam struct {
+	Endpoint     string `mapstructure:"endpoint"`
+	SeparatorStr string `mapstructure:"separator"`
+	separator    rune
+	Gzipped      *bool  `mapstructure:"gzip"`
+	Parallelism  *int64 `mapstructure:"parallelism"`
+}
+
 func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	failedCsvLine := make([]*FailedCSVLine, 0, 256)
 	jr := jobTypes.JobResult{
@@ -46,47 +64,15 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		CreatedAt: time.Now(),
 		Logs:      make([]jobTypes.Log, 0, 10),
 	}
-	if job.Disabled {
-		return jobs.StatusError(&jr, jobTypes.DISABLED)
-	}
-
-	if job.Key != InitialSyncJobKey {
-		return jobs.StatusError(&jr, jobTypes.BADKEY)
-	}
-
-	endpoint, ok := job.Params[endpointParamKey].(string)
-
-	if !ok {
-		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid endpoint param %s: %v", endpointParamKey, job.Params)))
-		return jobs.StatusError(&jr, jobTypes.INVALIDPARAM)
-	}
-
-	separatorStr, ok := job.Params[csvSeparatorKey].(string)
-	if !ok || len(separatorStr) != 1 {
-		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid separator param %s: %v", csvSeparatorKey, job.Params)))
-		return jobs.StatusError(&jr, jobTypes.INVALIDPARAM)
-	}
-	separator := []rune(separatorStr)[0]
-
-	gzipped, ok := job.Params[gzipKey].(bool)
-	if !ok {
-		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing or invalid gzip param. fallback to false"))
-		gzipped = false
-	}
-
-	var parallelism int
-	parallelismI32, ok := job.Params[parallelismKey].(int32)
-	if !ok {
-		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing or invalid parallelism param. fallback to thread counts"))
-		parallelism = runtime.NumCPU()
-	} else {
-		parallelism = int(parallelismI32)
+	jp, err := validateJobAndGetParam(job, &jr)
+	if err != nil {
+		return jobs.StatusError(&jr, err)
 	}
 
 	tempPath := path.Join(config.TempDir, fmt.Sprintf("%s.csv", uuid.New().String()))
-	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("downloading CSV from %s and saved to %s", endpoint, tempPath)))
+	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("downloading CSV from %s and saved to %s", jp.Endpoint, tempPath)))
 
-	fileLen, err := jobs.DownloadFile(endpoint, tempPath, gzipped)
+	fileLen, err := jobs.DownloadFile(jp.Endpoint, tempPath, *jp.Gzipped)
 	if err != nil {
 		return jobs.StatusError(&jr, err)
 	}
@@ -102,21 +88,20 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	}
 	defer f.Close()
 	data, err := mmap.Map(f, mmap.RDONLY, 0)
-	defer data.Unmap()
-
 	if err != nil {
 		return jobs.StatusError(&jr, err)
 	}
 
+	defer data.Unmap()
 	offset := headerLine(data) // skip header line
-	maxChunkSize := (fileLen - offset) / int64(parallelism)
+	maxChunkSize := (fileLen - offset) / *jp.Parallelism
 	maxChunkSize -= maxChunkSize % 4096 // 4k page
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 1)
 	warningChan := make(chan FailedCSVLine, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%c' separator", separator)))
+	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%c' separator", jp.separator)))
 
 	countGoroutines := 0
 
@@ -134,7 +119,7 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		log.Printf("spawning goroutine #%d\n", countGoroutines)
 		go worker(workerParam{
 			ctx:       ctx,
-			separator: separator,
+			separator: jp.separator,
 			data:      partition,
 			wg:        &wg,
 			errCh:     errorChan,
@@ -190,34 +175,6 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	return &jr, nil
 }
 
-func lastNewline(s []byte) int {
-	i := len(s) - 1
-	for i > 0 {
-		if s[i] == '\n' {
-			return i + 1
-		}
-		i -= 1
-	}
-	return len(s)
-}
-
-func headerLine(s []byte) int64 {
-	i := 0
-	for s[i] != '\n' {
-		i++
-	}
-	return int64(i + 1)
-}
-
-type workerParam struct {
-	ctx       context.Context
-	separator rune
-	data      []byte
-	wg        *sync.WaitGroup
-	errCh     chan error
-	warningCh chan FailedCSVLine
-}
-
 func worker(wp workerParam) {
 	defer wp.wg.Done()
 	batchSize := 100
@@ -239,11 +196,13 @@ func worker(wp workerParam) {
 					return
 				}
 				batch = batch[:0]
+				time.Sleep(time.Millisecond * 10) // maybe not needed but rest for a lil bit
 			}
 			if v == '\n' {
 				// process buf
 				csvReader := csv.NewReader(bytes.NewReader(buf))
 				csvReader.Comma = wp.separator
+				csvReader.LazyQuotes = true
 				err := gocsv.UnmarshalCSVWithoutHeaders(csvReader, &out)
 				if err != nil {
 					wp.warningCh <- FailedCSVLine{
@@ -274,4 +233,61 @@ func worker(wp workerParam) {
 			return
 		}
 	}
+}
+
+func validateJobAndGetParam(job *jobTypes.Job, jr *jobTypes.JobResult) (*jobParam, error) {
+	if job.Disabled {
+		return nil, jobTypes.DISABLED
+	}
+
+	if job.Key != InitialSyncJobKey {
+		return nil, jobTypes.BADKEY
+	}
+	var jp jobParam
+	if err := mapstructure.Decode(job.Params, &jp); err != nil {
+		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("error: %s", err)))
+		return nil, jobTypes.INVALIDPARAM
+	}
+
+	if jp.Endpoint == "" {
+		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid endpoint param %s: %v", endpointParamKey, job.Params)))
+		return nil, jobTypes.INVALIDPARAM
+	}
+
+	if jp.SeparatorStr == "" || len(jp.SeparatorStr) != 1 {
+		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid separator param %s: %v", csvSeparatorKey, job.Params)))
+		return nil, jobTypes.INVALIDPARAM
+	} else {
+		jp.separator = rune(jp.SeparatorStr[0])
+	}
+
+	if jp.Gzipped == nil {
+		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing or invalid gzip param. fallback to false"))
+		*jp.Gzipped = false
+	}
+
+	if jp.Parallelism == nil {
+		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing or invalid parallelism param. fallback to thread counts"))
+		*jp.Parallelism = int64(runtime.NumCPU())
+	}
+	return &jp, nil
+}
+
+func lastNewline(s []byte) int {
+	i := len(s) - 1
+	for i > 0 {
+		if s[i] == '\n' {
+			return i + 1
+		}
+		i -= 1
+	}
+	return len(s)
+}
+
+func headerLine(s []byte) int64 {
+	i := 0
+	for s[i] != '\n' {
+		i++
+	}
+	return int64(i + 1)
 }

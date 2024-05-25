@@ -52,7 +52,6 @@ func main() {
 	}))
 	e.Use(middleware.Gzip())
 	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
 
 	// JWT
 	e.Use(echojwt.WithConfig(echojwt.Config{

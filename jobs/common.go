@@ -39,7 +39,7 @@ func printProgressDownloadFile(done chan int64, path string, total int64) {
 			size := fi.Size()
 			percent := float64(size) / float64(total) * 100
 
-			log.Printf("\rDownload Progress: %.0f%%", percent)
+			fmt.Printf("\rDownload Progress: %.0f%%", percent)
 		}
 		time.Sleep(time.Second * 1)
 		if stop {
