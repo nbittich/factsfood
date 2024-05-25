@@ -212,7 +212,7 @@ func worker(wp workerParam) {
 				} else {
 					if len(out) != 1 {
 						wp.errCh <- fmt.Errorf("len of entry != 1: %d. %v", len(out), out)
-						break
+						return
 					}
 					batch = append(batch, out[0])
 
