@@ -18,6 +18,7 @@ import (
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/jobs"
 	"github.com/nbittich/factsfood/services/db"
+	"github.com/nbittich/factsfood/services/utils"
 	"github.com/nbittich/factsfood/types"
 	jobTypes "github.com/nbittich/factsfood/types/job"
 	offType "github.com/nbittich/factsfood/types/openfoodfacts"
@@ -49,10 +50,10 @@ type workerParam struct {
 }
 
 type jobParam struct {
-	Endpoint     string `mapstructure:"endpoint"`
-	SeparatorStr string `mapstructure:"separator"`
+	Endpoint     string `mapstructure:"endpoint" validate:"required,url"`
+	SeparatorStr string `mapstructure:"separator" validate:"required,len=1"`
 	separator    rune
-	Gzipped      *bool  `mapstructure:"gzip"`
+	Gzipped      bool   `mapstructure:"gzip"`
 	Parallelism  *int64 `mapstructure:"parallelism"`
 }
 
@@ -72,7 +73,7 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	tempPath := path.Join(config.TempDir, fmt.Sprintf("%s.csv", uuid.New().String()))
 	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("downloading CSV from %s and saved to %s", jp.Endpoint, tempPath)))
 
-	fileLen, err := jobs.DownloadFile(jp.Endpoint, tempPath, *jp.Gzipped)
+	fileLen, err := jobs.DownloadFile(jp.Endpoint, tempPath, jp.Gzipped)
 	if err != nil {
 		return jobs.StatusError(&jr, err)
 	}
@@ -87,6 +88,7 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		return jobs.StatusError(&jr, err)
 	}
 	defer f.Close()
+
 	data, err := mmap.Map(f, mmap.RDONLY, 0)
 	if err != nil {
 		return jobs.StatusError(&jr, err)
@@ -95,7 +97,7 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	defer data.Unmap()
 	offset := headerLine(data) // skip header line
 	maxChunkSize := (fileLen - offset) / *jp.Parallelism
-	maxChunkSize -= maxChunkSize % 4096 // 4k page
+	maxChunkSize -= maxChunkSize % int64(os.Getpagesize())
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 1)
 	warningChan := make(chan FailedCSVLine, 1)
@@ -103,7 +105,7 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 
 	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%c' separator", jp.separator)))
 
-	countGoroutines := 0
+	log.Println("spawning goroutine(s)")
 
 	for offset < fileLen {
 		end := offset + maxChunkSize
@@ -115,8 +117,6 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		partition := data[offset:currentLastNewLine]
 		wg.Add(1)
 
-		countGoroutines += 1
-		log.Printf("spawning goroutine #%d\n", countGoroutines)
 		go worker(workerParam{
 			ctx:       ctx,
 			separator: jp.separator,
@@ -248,23 +248,12 @@ func validateJobAndGetParam(job *jobTypes.Job, jr *jobTypes.JobResult) (*jobPara
 		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("error: %s", err)))
 		return nil, jobTypes.INVALIDPARAM
 	}
-
-	if jp.Endpoint == "" {
-		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid endpoint param %s: %v", endpointParamKey, job.Params)))
+	if err := utils.ValidateStruct(&jp); err != nil {
+		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("error: %s", err)))
 		return nil, jobTypes.INVALIDPARAM
 	}
 
-	if jp.SeparatorStr == "" || len(jp.SeparatorStr) != 1 {
-		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("missing or invalid separator param %s: %v", csvSeparatorKey, job.Params)))
-		return nil, jobTypes.INVALIDPARAM
-	} else {
-		jp.separator = rune(jp.SeparatorStr[0])
-	}
-
-	if jp.Gzipped == nil {
-		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing or invalid gzip param. fallback to false"))
-		*jp.Gzipped = false
-	}
+	jp.separator = rune(jp.SeparatorStr[0])
 
 	if jp.Parallelism == nil {
 		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing or invalid parallelism param. fallback to thread counts"))
