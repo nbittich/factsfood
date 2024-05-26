@@ -63,15 +63,21 @@ func DownloadFile(endpoint string, filepath string, gzipped bool) (int64, error)
 	defer out.Close()
 
 	defer resp.Body.Close()
-	rateLimit := config.HTTPDownloadRateLimitInMegaBytes * 1024 * 1024
-	limiter := rate.NewLimiter(rate.Limit(rateLimit), rateLimit)
 
-	var reader io.Reader = resp.Body
+	var rateLimit int
+	var reader io.Reader
+
 	if gzipped {
-		if reader, err = gzip.NewReader(reader); err != nil {
+		if reader, err = gzip.NewReader(resp.Body); err != nil {
 			return 0, err
 		}
+		rateLimit = config.HTTPGzippedDownloadRateLimitInMegaBytes * 1024 * 1024
+	} else {
+		rateLimit = config.HTTPDownloadRateLimitInMegaBytes * 1024 * 1024
+		reader = resp.Body
 	}
+
+	limiter := rate.NewLimiter(rate.Limit(rateLimit), rateLimit)
 
 	reader = &ThrottledReader{
 		r:       reader,

@@ -192,15 +192,6 @@ func worker(wp workerParam) {
 			log.Println("CSV Goroutine cancelled")
 			return
 		default:
-			if len(batch) == batchSize {
-				// flush
-				if err := db.InsertOrUpdateMany(wp.ctx, batch, col); err != nil {
-					wp.errCh <- err
-					return
-				}
-				batch = batch[:0]
-				time.Sleep(time.Millisecond * 100) // sleep 100ms
-			}
 			if v == '\n' {
 				// process buf
 				csvReader := csv.NewReader(bytes.NewReader(buf))
@@ -223,6 +214,15 @@ func worker(wp workerParam) {
 				// clear buffers
 				buf = buf[:0]
 				out = out[:0]
+				if len(batch) == batchSize {
+					// flush
+					if err := db.InsertOrUpdateMany(wp.ctx, batch, col); err != nil {
+						wp.errCh <- err
+						return
+					}
+					batch = batch[:0]
+					time.Sleep(time.Millisecond * 100) // sleep 100ms
+				}
 			} else {
 				buf = append(buf, v)
 			}

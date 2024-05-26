@@ -16,8 +16,8 @@ const execute = async (db, context = {}) => {
         'https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz',
       separator: "\t",
       gzip: true,
-      parallelism: 8,
-      batchSize100Ms: 20, // 8*20*10 = 1600req/sec
+      parallelism: 32,
+      batchSize100Ms: 15, // 8*20*10 = 4800req/sec
     },
   };
 
