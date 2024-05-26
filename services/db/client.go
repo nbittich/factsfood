@@ -21,7 +21,7 @@ func init() {
 	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s", config.MongoUser, config.MongoPassword, config.MongoHost, config.MongoPort)
 	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
 	defer cancel()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+	client, err := mongo.Connect(ctx, options.Client().SetMaxPoolSize(uint64(config.MongoMaxConnectionPool)).ApplyURI(mongoURI))
 	if err != nil {
 		panic(fmt.Errorf("could not create mongo client:\n %s", err.Error()))
 	}

@@ -1,6 +1,6 @@
 const KEY = 'OFF_INITIAL_SYNC_JOB';
 const execute = async (db, context = {}) => {
-  const {  uuid } = context;
+  const { uuid } = context;
   const job = {
     _id: uuid(),
     // cronExpression: "0 0 0 * * *",
@@ -16,7 +16,8 @@ const execute = async (db, context = {}) => {
         'https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz',
       separator: "\t",
       gzip: true,
-      parallelism: 8
+      parallelism: 8,
+      batchSize100Ms: 20, // 8*20*10 = 1600req/sec
     },
   };
 

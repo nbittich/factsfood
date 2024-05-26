@@ -41,20 +41,22 @@ type FailedCSVLine struct {
 }
 
 type workerParam struct {
-	ctx       context.Context
-	separator rune
-	data      []byte
-	wg        *sync.WaitGroup
-	errCh     chan error
-	warningCh chan FailedCSVLine
+	ctx            context.Context
+	batchSize100Ms uint
+	separator      rune
+	data           []byte
+	wg             *sync.WaitGroup
+	errCh          chan error
+	warningCh      chan FailedCSVLine
 }
 
 type jobParam struct {
-	Endpoint     string `mapstructure:"endpoint" validate:"required,url"`
-	SeparatorStr string `mapstructure:"separator" validate:"required,len=1"`
-	separator    rune
-	Gzipped      bool   `mapstructure:"gzip"`
-	Parallelism  *int64 `mapstructure:"parallelism"`
+	Endpoint       string `mapstructure:"endpoint" validate:"required,url"`
+	SeparatorStr   string `mapstructure:"separator" validate:"required,len=1"`
+	separator      rune
+	Gzipped        bool   `mapstructure:"gzip"`
+	Parallelism    *int64 `mapstructure:"parallelism"`
+	BatchSize100Ms *uint  `mapstructure:"batchSize100Ms"`
 }
 
 func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
@@ -118,12 +120,13 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		wg.Add(1)
 
 		go worker(workerParam{
-			ctx:       ctx,
-			separator: jp.separator,
-			data:      partition,
-			wg:        &wg,
-			errCh:     errorChan,
-			warningCh: warningChan,
+			ctx:            ctx,
+			separator:      jp.separator,
+			batchSize100Ms: *jp.BatchSize100Ms,
+			data:           partition,
+			wg:             &wg,
+			errCh:          errorChan,
+			warningCh:      warningChan,
 		})
 		offset = currentLastNewLine
 	}
@@ -177,7 +180,7 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 
 func worker(wp workerParam) {
 	defer wp.wg.Done()
-	batchSize := 100
+	batchSize := int(wp.batchSize100Ms)
 	buf := make([]byte, 0, 131_072) // 128kb buffer
 	batch := make([]types.Identifiable, 0, batchSize)
 	col := db.GetCollection("openfoodfacts")
@@ -196,7 +199,7 @@ func worker(wp workerParam) {
 					return
 				}
 				batch = batch[:0]
-				time.Sleep(time.Millisecond * 10) // maybe not needed but rest for a lil bit
+				time.Sleep(time.Millisecond * 100) // sleep 100ms
 			}
 			if v == '\n' {
 				// process buf
@@ -256,8 +259,12 @@ func validateJobAndGetParam(job *jobTypes.Job, jr *jobTypes.JobResult) (*jobPara
 	jp.separator = rune(jp.SeparatorStr[0])
 
 	if jp.Parallelism == nil {
-		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing or invalid parallelism param. fallback to thread counts"))
+		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing parallelism param. fallback to thread counts"))
 		*jp.Parallelism = int64(runtime.NumCPU())
+	}
+	if jp.BatchSize100Ms == nil {
+		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing batchSize100Ms param. fallback to 100"))
+		*jp.BatchSize100Ms = 100
 	}
 	return &jp, nil
 }
