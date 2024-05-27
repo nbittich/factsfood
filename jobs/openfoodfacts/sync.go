@@ -17,7 +17,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/jobs"
-	"github.com/nbittich/factsfood/jobs/manager"
 	"github.com/nbittich/factsfood/services/db"
 	"github.com/nbittich/factsfood/services/utils"
 	"github.com/nbittich/factsfood/types"
@@ -66,10 +65,6 @@ type jobParam struct {
 	Gzipped        bool   `mapstructure:"gzip"`
 	Parallelism    *int64 `mapstructure:"parallelism"`
 	BatchSize100Ms *uint  `mapstructure:"batchSize100Ms"`
-}
-
-func init() {
-	manager.Register(&Sync{}, InitialSyncJobKey, SyncJobKey)
 }
 
 func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {

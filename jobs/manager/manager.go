@@ -2,12 +2,14 @@ package manager
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"time"
 
 	"github.com/adhocore/gronx"
 	"github.com/nbittich/factsfood/config"
+	"github.com/nbittich/factsfood/jobs/openfoodfacts"
 	"github.com/nbittich/factsfood/services/db"
 	"github.com/nbittich/factsfood/types/job"
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,6 +24,7 @@ var (
 
 func init() {
 	jobProcessors = make(map[string]job.JobProcessor, 2)
+	Register(&openfoodfacts.Sync{}, openfoodfacts.InitialSyncJobKey, openfoodfacts.SyncJobKey)
 }
 
 func Register(processor job.JobProcessor, keys ...string) {
@@ -47,6 +50,9 @@ func Start() {
 		for _, j := range jobs {
 			processor, ok := jobProcessors[j.Key]
 			if !ok {
+				for k := range jobProcessors {
+					fmt.Println("here", k)
+				}
 				log.Println("processor not found: ", j.Key)
 				continue
 			}
