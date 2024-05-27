@@ -1,4 +1,4 @@
-const KEY = 'OFF_INITIAL_SYNC_JOB';
+const KEY = 'OFF_SYNC_JOB';
 const execute = async (db, context = {}) => {
   const { uuid } = context;
   const job = {
@@ -6,8 +6,8 @@ const execute = async (db, context = {}) => {
     cronExpression: "0 0 3 * * *",
     createdAt: new Date(),
     key: KEY,
-    name: 'OpenFoodFacts: Sync',
-    description: 'refresh the OFF database',
+    name: 'OpenFoodFacts: Daily Sync',
+    description: 'refresh the OFF database every day',
     running: false,
     disabled: false,
     params: {

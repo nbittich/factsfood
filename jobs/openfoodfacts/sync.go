@@ -27,12 +27,19 @@ import (
 )
 
 const (
-	InitialSyncJobKey = "OFF_INITIAL_SYNC_JOB"
-	SyncJobKey        = "OFF_SYNC_JOB"
-	endpointParamKey  = "endpoint"
-	csvSeparatorKey   = "separator"
-	gzipKey           = "gzip"
-	parallelismKey    = "parallelism"
+	InitialSyncJobKey           = "OFF_INITIAL_SYNC_JOB"
+	SyncJobKey                  = "OFF_SYNC_JOB"
+	OpenFoodFactsCollection     = "openfoodfacts"
+	endpointParamKey            = "endpoint"
+	csvSeparatorKey             = "separator"
+	gzipKey                     = "gzip"
+	parallelismKey              = "parallelism"
+	LineBufferSize              = 131_072 // 128kb buffer size
+	MaxFailedCsvLineInJobResult = 256     // Max failed csv lines to persist in job result
+	InitialCapLogs              = 10      // Logs slice initial capacity
+	SleepBetweenBatchesMs       = 100     // Sleep 100ms to allow mongodb between each batch to rest a lil bit.
+	//                                    // If you change this, make sure you  also change the job config in db.
+	//                                    // See BatchSize100Ms below
 )
 
 type Sync struct{}
@@ -66,12 +73,12 @@ func init() {
 }
 
 func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
-	failedCsvLine := make([]*FailedCSVLine, 0, 256)
+	failedCsvLine := make([]*FailedCSVLine, 0, MaxFailedCsvLineInJobResult)
 	jr := jobTypes.JobResult{
 		Key:       job.Key,
 		Status:    types.ERROR,
 		CreatedAt: time.Now(),
-		Logs:      make([]jobTypes.Log, 0, 10),
+		Logs:      make([]jobTypes.Log, 0, InitialCapLogs),
 	}
 	jp, err := validateJobAndGetParam(job, &jr)
 	if err != nil {
@@ -106,8 +113,8 @@ func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	maxChunkSize := (fileLen - offset) / *jp.Parallelism
 	maxChunkSize -= maxChunkSize % int64(os.Getpagesize())
 	var wg sync.WaitGroup
-	errorChan := make(chan error, 1)
-	warningChan := make(chan FailedCSVLine, 1)
+	errorChan := make(chan error, *jp.Parallelism)
+	warningChan := make(chan FailedCSVLine, *jp.Parallelism)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%c' separator", jp.separator)))
@@ -186,9 +193,9 @@ func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 func worker(wp workerParam) {
 	defer wp.wg.Done()
 	batchSize := int(wp.batchSize100Ms)
-	buf := make([]byte, 0, 131_072) // 128kb buffer
+	buf := make([]byte, 0, LineBufferSize)
 	batch := make([]types.Identifiable, 0, batchSize)
-	col := db.GetCollection("openfoodfacts")
+	col := db.GetCollection(OpenFoodFactsCollection)
 	out := make([]*offType.OpenFoodFactCSVEntry, 0, 1) // only to please gocsv
 
 	for _, v := range wp.data {
@@ -226,7 +233,7 @@ func worker(wp workerParam) {
 						return
 					}
 					batch = batch[:0]
-					time.Sleep(time.Millisecond * 100) // sleep 100ms
+					time.Sleep(time.Millisecond * SleepBetweenBatchesMs)
 				}
 			} else {
 				buf = append(buf, v)
