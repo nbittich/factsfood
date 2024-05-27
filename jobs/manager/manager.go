@@ -8,7 +8,6 @@ import (
 
 	"github.com/adhocore/gronx"
 	"github.com/nbittich/factsfood/config"
-	"github.com/nbittich/factsfood/jobs/openfoodfacts"
 	"github.com/nbittich/factsfood/services/db"
 	"github.com/nbittich/factsfood/types/job"
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,13 +21,14 @@ var (
 )
 
 func init() {
-	jobProcessors = make(map[string]job.JobProcessor, 1)
-	Register(openfoodfacts.InitialSyncJobKey, &openfoodfacts.InitialSync{})
+	jobProcessors = make(map[string]job.JobProcessor, 2)
 }
 
-func Register(key string, processor job.JobProcessor) {
-	log.Println("register job processor", key)
-	jobProcessors[key] = processor
+func Register(processor job.JobProcessor, keys ...string) {
+	for _, key := range keys {
+		log.Println("register job processor", key)
+		jobProcessors[key] = processor
+	}
 }
 
 func getEnabledAndNonRunningJobs() ([]job.Job, error) {

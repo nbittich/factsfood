@@ -17,6 +17,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/jobs"
+	"github.com/nbittich/factsfood/jobs/manager"
 	"github.com/nbittich/factsfood/services/db"
 	"github.com/nbittich/factsfood/services/utils"
 	"github.com/nbittich/factsfood/types"
@@ -27,13 +28,14 @@ import (
 
 const (
 	InitialSyncJobKey = "OFF_INITIAL_SYNC_JOB"
+	SyncJobKey        = "OFF_SYNC_JOB"
 	endpointParamKey  = "endpoint"
 	csvSeparatorKey   = "separator"
 	gzipKey           = "gzip"
 	parallelismKey    = "parallelism"
 )
 
-type InitialSync struct{}
+type Sync struct{}
 
 type FailedCSVLine struct {
 	Line  string `json:"line"`
@@ -59,7 +61,11 @@ type jobParam struct {
 	BatchSize100Ms *uint  `mapstructure:"batchSize100Ms"`
 }
 
-func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
+func init() {
+	manager.Register(&Sync{}, InitialSyncJobKey, SyncJobKey)
+}
+
+func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	failedCsvLine := make([]*FailedCSVLine, 0, 256)
 	jr := jobTypes.JobResult{
 		Key:       job.Key,
@@ -83,7 +89,6 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("CSV file %s downloaded, len: %d", tempPath, fileLen)))
 
 	// CSV shenaningans
-	// TODO extract to a separate func as it will be used also in delta-sync.go
 	jr.Logs = append(jr.Logs, jobs.NewLog("mmap csv file"))
 	f, err := os.Open(tempPath)
 	if err != nil {
@@ -173,7 +178,7 @@ func (is InitialSync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		jr.Metadata = metadata
 	}
 	jr.UpdatedAt = time.Now()
-	jr.Logs = append(jr.Logs, jobs.NewLog("initial sync finished"))
+	jr.Logs = append(jr.Logs, jobs.NewLog("sync finished"))
 
 	return &jr, nil
 }
@@ -243,7 +248,7 @@ func validateJobAndGetParam(job *jobTypes.Job, jr *jobTypes.JobResult) (*jobPara
 		return nil, jobTypes.DISABLED
 	}
 
-	if job.Key != InitialSyncJobKey {
+	if job.Key != InitialSyncJobKey && job.Key != SyncJobKey {
 		return nil, jobTypes.BADKEY
 	}
 	var jp jobParam

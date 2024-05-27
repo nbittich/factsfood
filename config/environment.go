@@ -36,7 +36,7 @@ var (
 	JWTCookie                               = loadEnvOrDefault("JWT_COOKIE", "jwt")
 	TempDir                                 = loadEnvOrDefault("TMP_DIRECTORY", os.TempDir())
 	HTTPDownloadRateLimitInMegaBytes        = loadIntEnvOrDefault("HTTP_DOWNLOAD_RATE_LIMIT_IN_MEGA_BYTES", 6)         // 6mb per sec by default
-	HTTPGzippedDownloadRateLimitInMegaBytes = loadIntEnvOrDefault("HTTP_GZIPPED_DOWNLOAD_RATE_LIMIT_IN_MEGA_BYTES", 6) // 8mb per sec by default
+	HTTPGzippedDownloadRateLimitInMegaBytes = loadIntEnvOrDefault("HTTP_GZIPPED_DOWNLOAD_RATE_LIMIT_IN_MEGA_BYTES", 6) // 6mb per sec by default
 )
 
 type EnvType uint8

@@ -3,12 +3,11 @@ const execute = async (db, context = {}) => {
   const { uuid } = context;
   const job = {
     _id: uuid(),
-    // cronExpression: "0 0 0 * * *",
+    cronExpression: "0 0 3 * * *",
     createdAt: new Date(),
-    specificDate: new Date(),
     key: KEY,
-    name: 'OpenFoodFacts: Initial Sync',
-    description: 'fill the FF database with OF data, using gzipped CSV',
+    name: 'OpenFoodFacts: Sync',
+    description: 'refresh the OFF database',
     running: false,
     disabled: false,
     params: {
@@ -16,8 +15,8 @@ const execute = async (db, context = {}) => {
         'https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz',
       separator: "\t",
       gzip: true,
-      parallelism: 16,
-      batchSize100Ms: 20, // 20*16*10 = 3200req/sec
+      parallelism: 4,
+      batchSize100Ms: 20, // 4*20*10 = 800req/sec
     },
   };
 
