@@ -19,11 +19,31 @@ var jobProcessors map[string]job.JobProcessor
 var (
 	jobCollection       = db.GetCollection("job")
 	jobResultCollection = db.GetCollection("jobResult")
+	started             bool
 )
 
 func init() {
 	jobProcessors = make(map[string]job.JobProcessor, 2)
 	Register(&openfoodfacts.Sync{}, openfoodfacts.InitialSyncJobKey, openfoodfacts.SyncJobKey)
+	initJobs()
+}
+
+func initJobs() {
+	jobs, err := getAllNonDisabledJobs()
+	if err != nil {
+		log.Fatal("could not load jobs:", err)
+	}
+	for _, j := range jobs {
+		j.Running = false
+		err := setNextSchedule(&j)
+		if err != nil {
+			log.Println("could not set next schedule for job", j.Name, "err", err)
+			j.Disabled = true
+		}
+		if _, err := db.Save(&j, jobCollection); err != nil {
+			log.Println("could not persist job : ", err)
+		}
+	}
 }
 
 func Register(processor job.JobProcessor, keys ...string) {
@@ -39,13 +59,25 @@ func getEnabledAndNonRunningJobs() ([]job.Job, error) {
 	return db.Find[job.Job](ctx, &bson.M{"disabled": false, "running": false}, jobCollection)
 }
 
+func getAllNonDisabledJobs() ([]job.Job, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
+	defer cancel()
+	return db.Find[job.Job](ctx, &bson.M{"disabled": false}, jobCollection)
+}
+
 func Start() {
+	if started {
+		log.Fatal("You cannot start the manager twice")
+	}
+	started = true
 	var wg sync.WaitGroup
+
 	for {
 		jobs, err := getEnabledAndNonRunningJobs()
 		if err != nil {
 			log.Println("could not load jobs:", err)
 		}
+
 		for _, j := range jobs {
 			processor, ok := jobProcessors[j.Key]
 			if !ok {
@@ -76,11 +108,6 @@ func setNextSchedule(j *job.Job) error {
 }
 
 func process(wg *sync.WaitGroup, j *job.Job, processor job.JobProcessor) {
-	err := setNextSchedule(j)
-	if err != nil {
-		log.Println("could not get next tick: ", err)
-		wg.Done()
-	}
 	if j.NextSchedule.Before(time.Now()) {
 		log.Println("starting job", j.Key)
 		j.Running = true
