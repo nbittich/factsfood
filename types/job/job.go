@@ -57,6 +57,7 @@ type Job struct {
 	ID             string    `bson:"_id" json:"_id"`
 	CronExpression string    `json:"cronExpression"`
 	SpecificDate   time.Time `json:"specificDate"`
+	NextSchedule   time.Time `json:"nextSchedule"`
 	Running        bool      `json:"isRunning"`
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`

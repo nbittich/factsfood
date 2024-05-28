@@ -2,7 +2,6 @@ package manager
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -50,9 +49,6 @@ func Start() {
 		for _, j := range jobs {
 			processor, ok := jobProcessors[j.Key]
 			if !ok {
-				for k := range jobProcessors {
-					fmt.Println("here", k)
-				}
 				log.Println("processor not found: ", j.Key)
 				continue
 			}
@@ -60,22 +56,32 @@ func Start() {
 			go process(&wg, &j, processor)
 		}
 		wg.Wait() // make sure that all jobs are set to running
-		time.Sleep(time.Minute)
+		time.Sleep(time.Second * 5)
 	}
 }
 
-func process(wg *sync.WaitGroup, j *job.Job, processor job.JobProcessor) {
-	nextSchedule := j.SpecificDate
-	if nextSchedule.IsZero() {
-		nextTick, err := gronx.NextTick(j.CronExpression, true)
-		if err != nil {
-			log.Println("could not get next tick: ", err)
-			wg.Done()
-			return
+func setNextSchedule(j *job.Job) error {
+	if j.NextSchedule.IsZero() {
+		if !j.SpecificDate.IsZero() {
+			j.NextSchedule = j.SpecificDate
+		} else {
+			nextTick, err := gronx.NextTick(j.CronExpression, true)
+			if err != nil {
+				return err
+			}
+			j.NextSchedule = nextTick
 		}
-		nextSchedule = nextTick
 	}
-	if nextSchedule.Before(time.Now()) {
+	return nil
+}
+
+func process(wg *sync.WaitGroup, j *job.Job, processor job.JobProcessor) {
+	err := setNextSchedule(j)
+	if err != nil {
+		log.Println("could not get next tick: ", err)
+		wg.Done()
+	}
+	if j.NextSchedule.Before(time.Now()) {
 		log.Println("starting job", j.Key)
 		j.Running = true
 		j.UpdatedAt = time.Now()
@@ -93,6 +99,11 @@ func process(wg *sync.WaitGroup, j *job.Job, processor job.JobProcessor) {
 			j.Disabled = true
 		case err != nil:
 			log.Println("job error: ", err)
+		default:
+			if err = setNextSchedule(j); err != nil {
+				log.Println("could not set next schedule", err)
+				j.Disabled = true
+			}
 		}
 		if _, err := db.Save(res, jobResultCollection); err != nil {
 			log.Println("could not persist job result: ", err)
