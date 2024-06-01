@@ -56,13 +56,13 @@ func Register(processor job.JobProcessor, keys ...string) {
 func getEnabledAndNonRunningJobs() ([]job.Job, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
 	defer cancel()
-	return db.Find[job.Job](ctx, &bson.M{"disabled": false, "running": false}, jobCollection)
+	return db.Find[job.Job](ctx, &bson.M{"disabled": false, "running": false}, jobCollection, nil)
 }
 
 func getAllNonDisabledJobs() ([]job.Job, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
 	defer cancel()
-	return db.Find[job.Job](ctx, &bson.M{"disabled": false}, jobCollection)
+	return db.Find[job.Job](ctx, &bson.M{"disabled": false}, jobCollection, nil)
 }
 
 func Start() {

@@ -4,7 +4,7 @@ import "github.com/nbittich/factsfood/types"
 
 type OpenFoodFactCSVEntry struct {
 	Code                                            string            `json:"_id" bson:"_id"`
-	Url                                             string            `json:"url,omitempty" bson:"url,omitempty"`
+	URL                                             string            `json:"url,omitempty" bson:"url,omitempty"`
 	Creator                                         string            `json:"-" bson:"-"`
 	CreatedT                                        int               `json:"createdT,omitempty" bson:"createdT,omitempty"`
 	CreatedDatetime                                 types.TimeISO8601 `json:"createdDatetime,omitempty" bson:"createdDatetime,omitempty"`
@@ -84,12 +84,12 @@ type OpenFoodFactCSVEntry struct {
 	LastImageDatetime                               types.TimeISO8601 `json:"lastImageDatetime,omitempty" bson:"lastImageDatetime,omitempty"`
 	MainCategory                                    string            `json:"mainCategory,omitempty" bson:"mainCategory,omitempty"`
 	MainCategoryEn                                  string            `json:"mainCategoryEn,omitempty" bson:"mainCategoryEn,omitempty"`
-	ImageUrl                                        string            `json:"imageUrl,omitempty" bson:"imageUrl,omitempty"`
-	ImageSmallUrl                                   string            `json:"imageSmallUrl,omitempty" bson:"imageSmallUrl,omitempty"`
-	ImageIngredientsUrl                             string            `json:"imageIngredientsUrl,omitempty" bson:"imageIngredientsUrl,omitempty"`
-	ImageIngredientsSmallUrl                        string            `json:"imageIngredientsSmallUrl,omitempty" bson:"imageIngredientsSmallUrl,omitempty"`
-	ImageNutritionUrl                               string            `json:"imageNutritionUrl,omitempty" bson:"imageNutritionUrl,omitempty"`
-	ImageNutritionSmallUrl                          string            `json:"imageNutritionSmallUrl,omitempty" bson:"imageNutritionSmallUrl,omitempty"`
+	ImageURL                                        string            `json:"imageUrl,omitempty" bson:"imageUrl,omitempty"`
+	ImageSmallURL                                   string            `json:"imageSmallUrl,omitempty" bson:"imageSmallUrl,omitempty"`
+	ImageIngredientsURL                             string            `json:"imageIngredientsUrl,omitempty" bson:"imageIngredientsUrl,omitempty"`
+	ImageIngredientsSmallURL                        string            `json:"imageIngredientsSmallUrl,omitempty" bson:"imageIngredientsSmallUrl,omitempty"`
+	ImageNutritionURL                               string            `json:"imageNutritionUrl,omitempty" bson:"imageNutritionUrl,omitempty"`
+	ImageNutritionSmallURL                          string            `json:"imageNutritionSmallUrl,omitempty" bson:"imageNutritionSmallUrl,omitempty"`
 	EnergyKj100G                                    int               `json:"energyKj100G,omitempty" bson:"energyKj100G,omitempty"`
 	EnergyKcal100G                                  int               `json:"energyKcal100G,omitempty" bson:"energyKcal100G,omitempty"`
 	Energy100G                                      int               `json:"energy100G,omitempty" bson:"energy100G,omitempty"`

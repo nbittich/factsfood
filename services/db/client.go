@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nbittich/factsfood/config"
+	"github.com/nbittich/factsfood/services/utils"
 	"github.com/nbittich/factsfood/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -15,6 +16,20 @@ import (
 )
 
 var DB *mongo.Client
+
+type PageOptions struct {
+	PageNumber int64         `json:"pageNumber" form:"pageNumber" query:"pageNumber" validate:"required,min=1"`
+	PageSize   int64         `json:"pageSize"   form:"pageSize"   query:"pageSize"   validate:"required,min=1"`
+	Sort       string        `json:"sort"       form:"sort"       query:"sort" `
+	Direction  SortDirection `json:"direction"  form:"direction"  query:"direction"  validate:"oneof=1,-1"`
+}
+
+type SortDirection int8
+
+const (
+	DESC SortDirection = -1
+	ASC  SortDirection = 1
+)
 
 func init() {
 	log.Println("connecting to mongo db...")
@@ -71,8 +86,21 @@ func FindOneBy[T types.HasID](ctx context.Context, filter bson.M, collection *mo
 	return *ptr, err
 }
 
-func Find[T types.HasID](ctx context.Context, filter interface{}, collection *mongo.Collection) ([]T, error) {
-	cursor, err := collection.Find(ctx, filter, &options.FindOptions{})
+func Find[T types.HasID](ctx context.Context, filter interface{}, collection *mongo.Collection, page *PageOptions) ([]T, error) {
+	opts := &options.FindOptions{}
+	if page != nil {
+		if err := utils.ValidateStruct(page); err != nil {
+			return nil, err
+		}
+		skip := (page.PageNumber - 1) * page.PageSize
+		opts.SetSkip(skip)
+		opts.SetLimit(page.PageSize)
+		if page.Sort != "" {
+			opts.SetSort(bson.M{page.Sort: page.Direction})
+		}
+	}
+
+	cursor, err := collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +114,8 @@ func Find[T types.HasID](ctx context.Context, filter interface{}, collection *mo
 	return results, nil
 }
 
-func FindAll[T types.HasID](ctx context.Context, collection *mongo.Collection) ([]T, error) {
-	return Find[T](ctx, &bson.D{}, collection)
+func FindAll[T types.HasID](ctx context.Context, collection *mongo.Collection, page *PageOptions) ([]T, error) {
+	return Find[T](ctx, &bson.D{}, collection, page)
 }
 
 func FindOneByID[T types.HasID](ctx context.Context, collection *mongo.Collection, id string) (T, error) {
