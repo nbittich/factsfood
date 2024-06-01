@@ -5,5 +5,5 @@ test-files/*
 !test-files/server.sh
 views/**/*_templ.go
 .env
-docker/data
+_docker/data
 
