@@ -4,7 +4,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const qrCodeInput = document.getElementById("qrCodeInput");
   const qrScanBtn = document.getElementById("qrScanModalBtn");
   const scanner = new Html5Qrcode("reader");
-  const config = { fps: 10, };
+  const config = {
+    fps: 10, qrbox: (width, height) => {
+      return { width: width / 1.5, height: height / 1.5 }
+    }
+  };
 
   modal.addEventListener('shown.bs.modal', () => {
     scanner.start({ facingMode: "environment" }, config, onScanSuccess);

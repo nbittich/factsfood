@@ -124,7 +124,13 @@ templ modalSignUp(signUpFormError types.InvalidFormError, signUpForm types.NewUs
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label={ utils.T(ctx, "common.close") }></button>
 				</div>
 				<div class="modal-body">
-					<form id="signUpForm" method="POST" action={ templ.URL("/users/new?lang=" + utils.GetLang(ctx)) } onsubmit="return onSubmitForm()">
+					<form
+						autocomplete="off"
+						id="signUpForm"
+						method="POST"
+						action={ templ.URL("/users/new?lang=" + utils.GetLang(ctx)) }
+						onsubmit="return onSubmitForm()"
+					>
 						<input type="hidden" name="csrf" value={ ctx.Value(types.CsrfKey).(string) }/>
 						<div class="mb-1">
 							<label for="username" class="form-label">{ utils.T(ctx,"common.username") }</label>

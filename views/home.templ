@@ -6,8 +6,8 @@ import (
 	"github.com/nbittich/factsfood/types"
 )
 
-templ Home(name string) {
-	@layout.Layout("home.title", "/", home(name), extraJs())
+templ Home() {
+	@layout.Layout("home.title", "/", home(), extraJs())
 }
 
 templ extraJs() {
@@ -15,29 +15,52 @@ templ extraJs() {
 	<script src="/assets/js/search-fact.js"></script>
 }
 
-templ home(_ string) {
+templ home() {
 	@modalScanner()
-	<div class="card">
+	<div class="card container">
 		<div class="card-body">
 			<form
+				autocomplete="off"
 				id="offSearchForm"
 				method="POST"
-				action={ templ.URL("/off/search?lang=" + utils.GetLang(ctx)) }
+				action={ templ.URL("/search?lang=" + utils.GetLang(ctx)) }
 				onsubmit="return onSubmitForm()"
 			>
 				<input type="hidden" name="csrf" value={ ctx.Value(types.CsrfKey).(string) }/>
 				<div class="mb-1">
-					<label for="qrCodeInput" class="form-label">{ utils.T(ctx, "off.code") }</label>
 					<div class="input-group mb-3">
-						<input type="text" id="qrCodeInput" name="qrCodeInput" value="" class="form-control"/>
+						<input
+							type="text"
+							id="qrCodeInput"
+							name="code"
+							value=""
+							placeholder={ utils.T(ctx, "off.code") }
+							class="form-control"
+						/>
 						<button
-							class="btn btn-outline-secondary"
+							class="btn btn-outline-primary"
 							type="button"
 							id="qrScanModalBtn"
 						>{ utils.T(ctx,"off.scan") }</button>
 					</div>
 				</div>
-				<button id="offSearchSubmitBtn" type="submit" class="btn btn-primary">{ utils.T(ctx,"common.submit") }</button>
+				<div class="mb-2">
+					<input
+						type="text"
+						id="productName"
+						name="name"
+						placeholder={ utils.T(ctx, "off.productName") }
+						value=""
+						class="form-control"
+					/>
+				</div>
+				<button
+					id="offSearchSubmitBtn"
+					type="submit"
+					class="btn btn-primary"
+				>
+					{ utils.T(ctx,"off.search") }
+				</button>
 			</form>
 		</div>
 	</div>

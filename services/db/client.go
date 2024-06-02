@@ -21,7 +21,7 @@ type PageOptions struct {
 	PageNumber int64         `json:"pageNumber" form:"pageNumber" query:"pageNumber" validate:"required,min=1"`
 	PageSize   int64         `json:"pageSize"   form:"pageSize"   query:"pageSize"   validate:"required,min=1"`
 	Sort       string        `json:"sort"       form:"sort"       query:"sort" `
-	Direction  SortDirection `json:"direction"  form:"direction"  query:"direction"  validate:"oneof=1,-1"`
+	Direction  SortDirection `json:"direction"  form:"direction"  query:"direction"  validate:"oneof=0 1 -1"`
 }
 
 type SortDirection int8

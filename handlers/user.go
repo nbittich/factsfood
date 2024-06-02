@@ -32,7 +32,7 @@ func handleGeneralFormError(c echo.Context, accept string, invalidFormError type
 		return c.JSON(http.StatusBadRequest, invalidFormError)
 	} else {
 		c.SetRequest(request.WithContext(context.WithValue(request.Context(), types.SigninFormErrorKey, invalidFormError)))
-		return renderHTML(http.StatusOK, c, views.Home("Home"))
+		return renderHTML(http.StatusOK, c, views.Home())
 	}
 }
 
@@ -160,7 +160,7 @@ func newUserHandler(c echo.Context) error {
 				return c.JSON(http.StatusBadRequest, err)
 			} else {
 				c.SetRequest(request.WithContext(context.WithValue(request.Context(), types.SignupFormErrorKey, err)))
-				return renderHTML(http.StatusOK, c, views.Home("Home"))
+				return renderHTML(http.StatusOK, c, views.Home())
 			}
 		}
 		c.Logger().Error("Unexpected error when creating a new user:", err.Error())

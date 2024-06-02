@@ -91,6 +91,6 @@ func main() {
 	fmt.Println(BANNER)
 
 	handlers.UserRouter(e)
-	e.GET("/", handlers.HomeHandler).Name = "home"
+	handlers.HomeRouter(e)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", config.Host, config.Port)))
 }
