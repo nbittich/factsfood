@@ -1,0 +1,48 @@
+.barcode-reader {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .barcode-reader {
+    width: 100%;
+  }
+}
+
+input {
+  --bs-border-radius: 0;
+
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.form-select {
+  --bs-border-radius: 0;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.btn {
+  --bs-btn-border-radius: 0;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.modal {
+  --bs-modal-border-radius: 0;
+}
+
+.card {
+  --bs-card-border-radius: 0;
+}
+
+textarea:focus {
+  user-select: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+@media (min-width: 720px) {
+  .terminal {
+    height: 82vh !important;
+  }
+}

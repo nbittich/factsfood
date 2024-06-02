@@ -2,12 +2,59 @@ package views
 
 import (
 	"github.com/nbittich/factsfood/views/layout"
+	"github.com/nbittich/factsfood/views/utils"
+	"github.com/nbittich/factsfood/types"
 )
 
 templ Home(name string) {
-	@layout.Layout("home.title", "/", home(name), nil)
+	@layout.Layout("home.title", "/", home(name), extraJs())
 }
 
-templ home(m string) {
-	<div>Hello, { m }!</div>
+templ extraJs() {
+	<script src="/assets/js/html5-qrcode.min.js"></script>
+	<script src="/assets/js/search-fact.js"></script>
+}
+
+templ home(_ string) {
+	@modalScanner()
+	<div class="card">
+		<div class="card-body">
+			<form
+				id="offSearchForm"
+				method="POST"
+				action={ templ.URL("/off/search?lang=" + utils.GetLang(ctx)) }
+				onsubmit="return onSubmitForm()"
+			>
+				<input type="hidden" name="csrf" value={ ctx.Value(types.CsrfKey).(string) }/>
+				<div class="mb-1">
+					<label for="qrCodeInput" class="form-label">{ utils.T(ctx, "off.code") }</label>
+					<div class="input-group mb-3">
+						<input type="text" id="qrCodeInput" name="qrCodeInput" value="" class="form-control"/>
+						<button
+							class="btn btn-outline-secondary"
+							type="button"
+							id="qrScanModalBtn"
+						>{ utils.T(ctx,"off.scan") }</button>
+					</div>
+				</div>
+				<button id="offSearchSubmitBtn" type="submit" class="btn btn-primary">{ utils.T(ctx,"common.submit") }</button>
+			</form>
+		</div>
+	</div>
+	<div></div>
+}
+
+templ modalScanner() {
+	<div class="modal fade" id="scanModal" tabindex="-1" aria-labelledby="scanModal" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label={ utils.T(ctx, "common.close") }></button>
+				</div>
+				<div class="modal-body">
+					<div id="reader" class="barcode-reader mt-1"></div>
+				</div>
+			</div>
+		</div>
+	</div>
 }

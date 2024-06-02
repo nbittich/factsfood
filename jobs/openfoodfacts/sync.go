@@ -99,11 +99,11 @@ func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	defer f.Close()
 
 	data, err := mmap.Map(f, mmap.RDONLY, 0)
+	defer data.Unmap()
 	if err != nil {
 		return jobs.StatusError(&jr, err)
 	}
 
-	defer data.Unmap()
 	offset := headerLine(data) // skip header line
 	maxChunkSize := (fileLen - offset) / *jp.Parallelism
 	maxChunkSize -= maxChunkSize % int64(os.Getpagesize())
@@ -179,6 +179,15 @@ func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		metadata["failedCsvLines"] = failedCsvLine
 		jr.Metadata = metadata
 	}
+
+	// delete csv
+	go func(p string) {
+		time.Sleep(time.Minute * 5) // wait for unmap, f.close
+		if err := os.Remove(p); err != nil {
+			log.Println("could not delete", p, err)
+		}
+	}(tempPath)
+
 	jr.UpdatedAt = time.Now()
 	jr.Logs = append(jr.Logs, jobs.NewLog("sync finished"))
 

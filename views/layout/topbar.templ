@@ -18,13 +18,13 @@ templ extraJs(signUpFormError types.InvalidFormError, signInFormError types.Inva
 	if len(signUpFormError.Messages) != 0 {
 		<script>
 		  document.addEventListener("DOMContentLoaded", () => {
-			  openModal("signUpModal");
+			  toggleModal("signUpModal", true);
 			});
 		</script>
 	} else if len(signInFormError.Messages) != 0 {
 		<script>
 		  document.addEventListener("DOMContentLoaded", () => {
-          openModal("signInModal")
+          toggleModal("signInModal", true)
 			});
 		</script>
 	}

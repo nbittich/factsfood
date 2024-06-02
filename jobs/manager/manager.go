@@ -93,16 +93,14 @@ func Start() {
 }
 
 func setNextSchedule(j *job.Job) error {
-	if j.NextSchedule.IsZero() {
-		if !j.SpecificDate.IsZero() {
-			j.NextSchedule = j.SpecificDate
-		} else {
-			nextTick, err := gronx.NextTick(j.CronExpression, true)
-			if err != nil {
-				return err
-			}
-			j.NextSchedule = nextTick
+	if !j.SpecificDate.IsZero() {
+		j.NextSchedule = j.SpecificDate
+	} else {
+		nextTick, err := gronx.NextTick(j.CronExpression, true)
+		if err != nil {
+			return err
 		}
+		j.NextSchedule = nextTick
 	}
 	return nil
 }
