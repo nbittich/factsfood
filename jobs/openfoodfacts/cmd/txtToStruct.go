@@ -49,7 +49,7 @@ func main() {
 				strings.HasSuffix(field, "_serving") ||
 				strings.HasSuffix(field, "_quantity") ||
 				strings.HasSuffix(field, "_n") {
-				t = "int"
+				t = "*int"
 			}
 
 			if strings.HasSuffix(field, "_datetime") {
@@ -57,7 +57,7 @@ func main() {
 			}
 
 			if field == "completeness" {
-				t = "float64"
+				t = "*float64"
 			}
 			if field == "creator" ||
 				field == "states" ||
