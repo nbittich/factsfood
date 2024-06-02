@@ -28,7 +28,6 @@ func main() {
 	s := "type OpenFoodFactCSVEntry struct {\n"
 	for _, field := range strings.Split(fields, "\n") {
 		field = strings.ReplaceAll(strings.TrimSpace(field), "-", "_")
-		field = strings.ReplaceAll(field, "url", "URL")
 		if len(field) == 0 {
 			continue
 		}
@@ -40,6 +39,8 @@ func main() {
 			s += fmt.Sprintf("%s string `json:\"_id\" bson:\"_id\"`\n", strings.Join(temp, ""))
 		} else {
 			goFieldName := strings.Join(temp, "")
+			goFieldName = strings.ReplaceAll(goFieldName, "Url", "URL")
+
 			jsonFieldName := firstToLower(goFieldName)
 			f := fmt.Sprintf("\"%s,omitempty\"", jsonFieldName)
 			t := "string"
@@ -49,7 +50,7 @@ func main() {
 				strings.HasSuffix(field, "_serving") ||
 				strings.HasSuffix(field, "_quantity") ||
 				strings.HasSuffix(field, "_n") {
-				t = "*int"
+				t = "int"
 			}
 
 			if strings.HasSuffix(field, "_datetime") {
@@ -57,7 +58,7 @@ func main() {
 			}
 
 			if field == "completeness" {
-				t = "*float64"
+				t = "float64"
 			}
 			if field == "creator" ||
 				field == "states" ||
