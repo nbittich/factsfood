@@ -14,11 +14,9 @@ import (
 	"github.com/edsrzf/mmap-go"
 	"github.com/gocarina/gocsv"
 	"github.com/google/uuid"
-	"github.com/mitchellh/mapstructure"
 	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/jobs"
 	"github.com/nbittich/factsfood/services/db"
-	"github.com/nbittich/factsfood/services/utils"
 	"github.com/nbittich/factsfood/types"
 	jobTypes "github.com/nbittich/factsfood/types/job"
 	offType "github.com/nbittich/factsfood/types/openfoodfacts"
@@ -28,37 +26,29 @@ import (
 const (
 	InitialSyncJobKey           = "OFF_INITIAL_SYNC_JOB"
 	SyncJobKey                  = "OFF_SYNC_JOB"
-	OpenFoodFactsCollection     = "openfoodfacts"
-	endpointParamKey            = "endpoint"
-	csvSeparatorKey             = "separator"
-	gzipKey                     = "gzip"
-	parallelismKey              = "parallelism"
-	LineBufferSize              = 131_072 // 128kb buffer size
-	MaxFailedCsvLineInJobResult = 256     // Max failed csv lines to persist in job result
-	InitialCapLogs              = 10      // Logs slice initial capacity
-	SleepBetweenBatchesMs       = 100     // Sleep 100ms to allow mongodb between each batch to rest a lil bit.
-	//                                    // If you change this, make sure you  also change the job config in db.
-	//                                    // See BatchSize100Ms below
+	lineBufferSize              = 131_072 // 128kb buffer size
+	maxFailedCsvLineInJobResult = 256     // Max failed csv lines to persist in job result
+
 )
 
 type Sync struct{}
 
-type FailedCSVLine struct {
+type failedCSVLine struct {
 	Line  string `json:"line"`
 	Error string `json:"error"`
 }
 
-type workerParam struct {
+type syncWorkerParam struct {
 	ctx            context.Context
 	batchSize100Ms uint
 	separator      rune
 	data           []byte
 	wg             *sync.WaitGroup
 	errCh          chan error
-	warningCh      chan FailedCSVLine
+	warningCh      chan failedCSVLine
 }
 
-type jobParam struct {
+type syncJobParam struct {
 	Endpoint       string `mapstructure:"endpoint" validate:"required,url"`
 	SeparatorStr   string `mapstructure:"separator" validate:"required,len=1"`
 	separator      rune
@@ -68,14 +58,27 @@ type jobParam struct {
 }
 
 func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
-	failedCsvLine := make([]*FailedCSVLine, 0, MaxFailedCsvLineInJobResult)
+	failedCsvLine := make([]*failedCSVLine, 0, maxFailedCsvLineInJobResult)
 	jr := jobTypes.JobResult{
 		Key:       job.Key,
 		Status:    types.ERROR,
 		CreatedAt: time.Now(),
 		Logs:      make([]jobTypes.Log, 0, InitialCapLogs),
 	}
-	jp, err := validateJobAndGetParam(job, &jr)
+	jp, err := jobs.ValidateJobAndGetParam(job, &jr,
+		func(jp *syncJobParam) (*syncJobParam, error) {
+			jp.separator = rune(jp.SeparatorStr[0])
+
+			if jp.Parallelism == nil {
+				jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing parallelism param. fallback to thread counts"))
+				*jp.Parallelism = int64(runtime.NumCPU())
+			}
+			if jp.BatchSize100Ms == nil {
+				jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing batchSize100Ms param. fallback to 100"))
+				*jp.BatchSize100Ms = 100
+			}
+			return jp, nil
+		}, InitialSyncJobKey, SyncJobKey)
 	if err != nil {
 		return jobs.StatusError(&jr, err)
 	}
@@ -104,13 +107,14 @@ func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		return jobs.StatusError(&jr, err)
 	}
 
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+	errorChan := make(chan error, *jp.Parallelism)
+	warningChan := make(chan failedCSVLine, *jp.Parallelism)
+
 	offset := headerLine(data) // skip header line
 	maxChunkSize := (fileLen - offset) / *jp.Parallelism
 	maxChunkSize -= maxChunkSize % int64(os.Getpagesize())
-	var wg sync.WaitGroup
-	errorChan := make(chan error, *jp.Parallelism)
-	warningChan := make(chan FailedCSVLine, *jp.Parallelism)
-	ctx, cancel := context.WithCancel(context.Background())
 
 	jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("Extracting CSV using '%c' separator", jp.separator)))
 
@@ -126,7 +130,7 @@ func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		partition := data[offset:currentLastNewLine]
 		wg.Add(1)
 
-		go worker(workerParam{
+		go syncWorker(syncWorkerParam{
 			ctx:            ctx,
 			separator:      jp.separator,
 			batchSize100Ms: *jp.BatchSize100Ms,
@@ -149,10 +153,8 @@ func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		select {
 		case e, ok := <-errorChan:
 			if ok {
-				if e != nil {
-					cancel()
-					return jobs.StatusError(&jr, e)
-				}
+				cancel()
+				return jobs.StatusError(&jr, e)
 			} else {
 				errorChan = nil
 			}
@@ -194,13 +196,12 @@ func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	return &jr, nil
 }
 
-func worker(wp workerParam) {
+func syncWorker(wp syncWorkerParam) {
 	defer wp.wg.Done()
 	batchSize := int(wp.batchSize100Ms)
-	buf := make([]byte, 0, LineBufferSize)
+	buf := make([]byte, 0, lineBufferSize)
 	batch := make([]types.Identifiable, 0, batchSize)
-	col := db.GetCollection(OpenFoodFactsCollection)
-	out := make([]*offType.OpenFoodFactCSVEntry, 0, 1) // only to please gocsv
+	out := make([]*offType.OpenFoodFact, 0, 1) // only to please gocsv
 
 	for _, v := range wp.data {
 		select {
@@ -215,7 +216,7 @@ func worker(wp workerParam) {
 				csvReader.LazyQuotes = true
 				err := gocsv.UnmarshalCSVWithoutHeaders(csvReader, &out)
 				if err != nil {
-					wp.warningCh <- FailedCSVLine{
+					wp.warningCh <- failedCSVLine{
 						Line:  string(buf),
 						Error: err.Error(),
 					}
@@ -232,12 +233,12 @@ func worker(wp workerParam) {
 				out = out[:0]
 				if len(batch) == batchSize {
 					// flush
-					if err := db.InsertOrUpdateMany(wp.ctx, batch, col); err != nil {
+					if err := db.InsertOrUpdateMany(wp.ctx, batch, offCollection); err != nil {
 						wp.errCh <- err
 						return
 					}
 					batch = batch[:0]
-					time.Sleep(time.Millisecond * SleepBetweenBatchesMs)
+					time.Sleep(time.Millisecond * sleepBetweenBatchesMs)
 				}
 			} else {
 				buf = append(buf, v)
@@ -247,42 +248,11 @@ func worker(wp workerParam) {
 	}
 	if len(batch) > 0 {
 		// final flush
-		if err := db.InsertOrUpdateMany(wp.ctx, batch, col); err != nil {
+		if err := db.InsertOrUpdateMany(wp.ctx, batch, offCollection); err != nil {
 			wp.errCh <- err
 			return
 		}
 	}
-}
-
-func validateJobAndGetParam(job *jobTypes.Job, jr *jobTypes.JobResult) (*jobParam, error) {
-	if job.Disabled {
-		return nil, jobTypes.DISABLED
-	}
-
-	if job.Key != InitialSyncJobKey && job.Key != SyncJobKey {
-		return nil, jobTypes.BADKEY
-	}
-	var jp jobParam
-	if err := mapstructure.Decode(job.Params, &jp); err != nil {
-		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("error: %s", err)))
-		return nil, jobTypes.INVALIDPARAM
-	}
-	if err := utils.ValidateStruct(&jp); err != nil {
-		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("error: %s", err)))
-		return nil, jobTypes.INVALIDPARAM
-	}
-
-	jp.separator = rune(jp.SeparatorStr[0])
-
-	if jp.Parallelism == nil {
-		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing parallelism param. fallback to thread counts"))
-		*jp.Parallelism = int64(runtime.NumCPU())
-	}
-	if jp.BatchSize100Ms == nil {
-		jr.Logs = append(jr.Logs, jobs.NewLog("warning! missing batchSize100Ms param. fallback to 100"))
-		*jp.BatchSize100Ms = 100
-	}
-	return &jp, nil
 }
 
 func lastNewline(s []byte) int {

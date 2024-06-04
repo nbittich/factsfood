@@ -8,10 +8,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/mitchellh/mapstructure"
 	"github.com/nbittich/factsfood/config"
+	"github.com/nbittich/factsfood/services/utils"
 	"github.com/nbittich/factsfood/types"
 	"github.com/nbittich/factsfood/types/job"
 	"golang.org/x/time/rate"
@@ -107,4 +110,34 @@ func NewLog(msg string) job.Log {
 		Timestamp: time.Now(),
 		Message:   msg,
 	}
+}
+
+func ValidateJobAndGetParam[T any](
+	j *job.Job,
+	jr *job.JobResult,
+	modifier func(t *T) (*T, error),
+	validKeys ...string,
+) (*T, error) {
+	if j.Disabled {
+		return nil, job.DISABLED
+	}
+	if !slices.Contains(validKeys, j.Key) {
+		return nil, job.BADKEY
+	}
+	it := new(T)
+
+	if err := mapstructure.Decode(j.Params, it); err != nil {
+		jr.Logs = append(jr.Logs, NewLog(fmt.Sprintf("error: %s", err)))
+		return nil, job.INVALIDPARAM
+	}
+	if err := utils.ValidateStruct(it); err != nil {
+		jr.Logs = append(jr.Logs, NewLog(fmt.Sprintf("error: %s", err)))
+		return nil, job.INVALIDPARAM
+	}
+
+	if modifier != nil {
+		return modifier(it)
+	}
+
+	return it, nil
 }

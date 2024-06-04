@@ -65,18 +65,12 @@ func FilterByID(id string) primitive.M {
 }
 
 func Exist(ctx context.Context, filter bson.M, collection *mongo.Collection) (bool, error) {
-	res := collection.FindOne(ctx, filter, &options.FindOneOptions{})
-
-	if err := res.Err(); err != nil {
-		if err == mongo.ErrNoDocuments {
-			return false, nil
-		} else {
-			log.Printf("could not call exists, maybe a bug? %s", err)
-			return false, err
-		}
+	c, err := Count(ctx, filter, collection)
+	if err != nil {
+		log.Printf("could not call exists, maybe a bug? %s \n", err)
+		return false, err
 	}
-
-	return true, nil
+	return c != 0, nil
 }
 
 func FindOneBy[T types.HasID](ctx context.Context, filter bson.M, collection *mongo.Collection) (T, error) {
@@ -86,8 +80,17 @@ func FindOneBy[T types.HasID](ctx context.Context, filter bson.M, collection *mo
 	return *ptr, err
 }
 
+func Count(ctx context.Context, filter interface{}, collection *mongo.Collection) (int64, error) {
+	return collection.CountDocuments(ctx, filter)
+}
+
+func CountAll(ctx context.Context, collection *mongo.Collection) (int64, error) {
+	return Count(ctx, &bson.D{}, collection)
+}
+
 func Find[T types.HasID](ctx context.Context, filter interface{}, collection *mongo.Collection, page *PageOptions) ([]T, error) {
 	opts := &options.FindOptions{}
+	resultSize := 100
 	if page != nil {
 		if err := utils.ValidateStruct(page); err != nil {
 			return nil, err
@@ -95,6 +98,7 @@ func Find[T types.HasID](ctx context.Context, filter interface{}, collection *mo
 		skip := (page.PageNumber - 1) * page.PageSize
 		opts.SetSkip(skip)
 		opts.SetLimit(page.PageSize)
+		resultSize = int(page.PageSize)
 		if page.Sort != "" {
 			opts.SetSort(bson.M{page.Sort: page.Direction})
 		}
@@ -104,13 +108,16 @@ func Find[T types.HasID](ctx context.Context, filter interface{}, collection *mo
 	if err != nil {
 		return nil, err
 	}
+	return CursorToSlice[T](ctx, cursor, resultSize)
+}
+
+func CursorToSlice[T types.HasID](ctx context.Context, cursor *mongo.Cursor, size int) ([]T, error) {
 	defer cursor.Close(ctx)
 
-	results := make([]T, 0, 100)
+	results := make([]T, 0, size)
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
-
 	return results, nil
 }
 

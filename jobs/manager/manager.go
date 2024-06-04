@@ -19,12 +19,13 @@ var jobProcessors map[string]job.JobProcessor
 var (
 	jobCollection       = db.GetCollection("job")
 	jobResultCollection = db.GetCollection("jobResult")
-	started             bool
+	started             = false
 )
 
 func init() {
-	jobProcessors = make(map[string]job.JobProcessor, 2)
+	jobProcessors = make(map[string]job.JobProcessor, 3)
 	Register(&openfoodfacts.Sync{}, openfoodfacts.InitialSyncJobKey, openfoodfacts.SyncJobKey)
+	Register(&openfoodfacts.SyncImg{}, openfoodfacts.SyncImgJobKey)
 	initJobs()
 }
 
@@ -124,6 +125,7 @@ func process(wg *sync.WaitGroup, j *job.Job, processor job.JobProcessor) {
 			j.Disabled = true
 		case err != nil:
 			log.Println("job error: ", err)
+			fallthrough
 		default:
 			if err = setNextSchedule(j); err != nil {
 				log.Println("could not set next schedule", err)

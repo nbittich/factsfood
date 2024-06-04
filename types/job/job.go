@@ -55,17 +55,17 @@ type JobParams map[string]interface{}
 
 type Job struct {
 	ID             string    `bson:"_id" json:"_id"`
-	CronExpression string    `json:"cronExpression"`
-	SpecificDate   time.Time `json:"specificDate"`
-	NextSchedule   time.Time `json:"nextSchedule"`
+	CronExpression string    `json:"cronExpression,omitempty"`
+	SpecificDate   time.Time `json:"specificDate,omitempty"`
+	NextSchedule   time.Time `json:"nextSchedule,omitempty"`
 	Running        bool      `json:"isRunning"`
 	CreatedAt      time.Time `json:"createdAt"`
-	UpdatedAt      time.Time `json:"updatedAt"`
+	UpdatedAt      time.Time `json:"updatedAt,omitempty"`
 	Key            string    `json:"key"`
 	Name           string    `json:"name"`
 	Description    string    `json:"description"`
 	Disabled       bool      `json:"disabled"`
-	Params         JobParams `json:"params"`
+	Params         JobParams `json:"params,omitempty"`
 }
 
 func (job Job) GetID() string {

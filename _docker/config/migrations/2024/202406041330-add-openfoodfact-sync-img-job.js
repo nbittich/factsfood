@@ -1,20 +1,16 @@
-const KEY = 'OFF_SYNC_JOB';
+const KEY = 'OFF_SYNC_IMG_JOB';
 const execute = async (db, context = {}) => {
   const { uuid } = context;
   const job = {
     _id: uuid(),
-    cronExpression: "0 0 3 * * *",
+    cronExpression: "0 0 14 * * *",
     createdAt: new Date(),
     key: KEY,
-    name: 'OpenFoodFacts: Daily Sync',
-    description: 'refresh the OFF database every day',
+    name: 'OpenFoodFacts: Daily Sync Images',
+    description: 'refresh the OFF image database every day',
     running: false,
     disabled: false,
     params: {
-      endpoint:
-        'https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz',
-      separator: "\t",
-      gzip: true,
       parallelism: 4,
       batchSize100Ms: 20, // 4*20*10 = 800req/sec
     },
@@ -31,7 +27,7 @@ const rollback = async (db, _context = {}) => {
 
 module.exports = {
   targetDatabases: ['factsfood'],
-  description: 'Open Food Facts Daily Sync job',
+  description: 'Open Food Facts Image Sync job',
   rollback,
   execute,
 };

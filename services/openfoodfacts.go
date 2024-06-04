@@ -14,7 +14,7 @@ const (
 	OpenFoodFactsCollection = "openfoodfacts"
 )
 
-func (service *OFFService) Search(ctx context.Context, criteria *openfoodfacts.OFFSearchCriteria) ([]openfoodfacts.OpenFoodFactCSVEntry, error) {
+func (service *OFFService) Search(ctx context.Context, criteria *openfoodfacts.OFFSearchCriteria) ([]openfoodfacts.OpenFoodFact, error) {
 	col := db.GetCollection(OpenFoodFactsCollection)
 	filters := make([]bson.M, 0, 2)
 	if criteria.Code != "" {
@@ -30,11 +30,11 @@ func (service *OFFService) Search(ctx context.Context, criteria *openfoodfacts.O
 	}
 	// find all
 	if len(filters) == 0 {
-		return db.FindAll[openfoodfacts.OpenFoodFactCSVEntry](ctx, col, &criteria.Page)
+		return db.FindAll[openfoodfacts.OpenFoodFact](ctx, col, &criteria.Page)
 	} else {
 		filter := bson.M{
 			"$and": filters,
 		}
-		return db.Find[openfoodfacts.OpenFoodFactCSVEntry](ctx, &filter, col, &criteria.Page)
+		return db.Find[openfoodfacts.OpenFoodFact](ctx, &filter, col, &criteria.Page)
 	}
 }

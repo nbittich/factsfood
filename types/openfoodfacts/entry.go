@@ -2,9 +2,25 @@ package openfoodfacts
 
 import "github.com/nbittich/factsfood/types"
 
-type OpenFoodFactCSVEntry struct {
+type FactsFood struct {
+	OpenFoodFact    `bson:",inline"`
+	OpenFoodFactImg *OpenFoodFactImg `json:"openfoodfact_img,omitempty"`
+}
+type OpenFoodFactImg struct {
+	ID                       string `json:"_id" bson:"_id"`
+	OpenFoodFactID           string `json:"openfoodfacts_id"`
+	LastImageT               int    `json:"lastImageT,omitempty" bson:"lastImageT,omitempty"`
+	ImageURL                 string `json:"imageURL,omitempty" bson:"imageURL,omitempty"`
+	ImageSmallURL            string `json:"imageSmallURL,omitempty" bson:"imageSmallURL,omitempty"`
+	ImageIngredientsURL      string `json:"imageIngredientsURL,omitempty" bson:"imageIngredientsURL,omitempty"`
+	ImageIngredientsSmallURL string `json:"imageIngredientsSmallURL,omitempty" bson:"imageIngredientsSmallURL,omitempty"`
+	ImageNutritionURL        string `json:"imageNutritionURL,omitempty" bson:"imageNutritionURL,omitempty"`
+	ImageNutritionSmallURL   string `json:"imageNutritionSmallURL,omitempty" bson:"imageNutritionSmallURL,omitempty"`
+}
+
+type OpenFoodFact struct {
 	Code                                            string            `json:"_id" bson:"_id"`
-	URL                                             string            `json:"uRL,omitempty" bson:"uRL,omitempty"`
+	URL                                             string            `json:"url,omitempty" bson:"url,omitempty"`
 	Creator                                         string            `json:"-" bson:"-"`
 	CreatedT                                        int               `json:"createdT,omitempty" bson:"createdT,omitempty"`
 	CreatedDatetime                                 types.TimeISO8601 `json:"createdDatetime,omitempty" bson:"createdDatetime,omitempty"`
@@ -211,10 +227,10 @@ type OpenFoodFactCSVEntry struct {
 	Acidity100G                                     int               `json:"acidity100G,omitempty" bson:"acidity100G,omitempty"`
 }
 
-func (off OpenFoodFactCSVEntry) GetID() string {
+func (off OpenFoodFact) GetID() string {
 	return off.Code
 }
 
-func (off *OpenFoodFactCSVEntry) SetID(id string) {
+func (off *OpenFoodFact) SetID(id string) {
 	off.Code = id
 }
