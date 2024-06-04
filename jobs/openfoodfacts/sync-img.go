@@ -77,7 +77,7 @@ func (sij SyncImg) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	errorChan := make(chan error, *jp.Parallelism)
 	chunkSize := offCount / *jp.Parallelism
 	offset := int64(0)
-	for offset <= offCount {
+	for offset < offCount {
 		wg.Add(1)
 		jr.Logs = append(jr.Logs, jobs.NewLog(fmt.Sprintf("spawning goroutine for offset:%d, chunkSize:%d", offset, chunkSize)))
 

@@ -55,7 +55,7 @@ func (apiError InvalidFormError) Error() string {
 }
 
 type TimeISO8601 struct {
-	time.Time `bson:",inline"`
+	time.Time
 }
 
 func (date *TimeISO8601) UnmarshalCSV(csv string) (err error) {
