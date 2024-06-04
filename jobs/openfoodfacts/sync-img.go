@@ -36,6 +36,13 @@ type syncImgWorkerParam struct {
 	page           db.PageOptions
 	wg             *sync.WaitGroup
 	errCh          chan error
+	resCh          chan imgSyncResult
+}
+
+type imgSyncResult struct {
+	processed    int64
+	synced       int64
+	noSyncNeeded int64
 }
 
 var imgCollection = db.GetCollection(OpenFoodFactsImgCollection)
@@ -47,6 +54,7 @@ func (sij SyncImg) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 		CreatedAt: time.Now(),
 		Logs:      make([]jobTypes.Log, 0, InitialCapLogs),
 	}
+	sr := imgSyncResult{}
 	jp, err := jobs.ValidateJobAndGetParam(job, &jr,
 		func(jp *syncImgJobParam) (*syncImgJobParam, error) {
 			if jp.Parallelism == nil {
@@ -75,6 +83,7 @@ func (sij SyncImg) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 
 	var wg sync.WaitGroup
 	errorChan := make(chan error, *jp.Parallelism)
+	resChan := make(chan imgSyncResult, *jp.Parallelism)
 	chunkSize := offCount / *jp.Parallelism
 	offset := int64(0)
 	for offset < offCount {
@@ -88,6 +97,7 @@ func (sij SyncImg) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 			chunkSize:      chunkSize,
 			wg:             &wg,
 			errCh:          errorChan,
+			resCh:          resChan,
 		})
 		offset += chunkSize
 	}
@@ -95,13 +105,30 @@ func (sij SyncImg) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	go func() {
 		wg.Wait()
 		close(errorChan)
+		close(resChan)
 	}()
-
-	for err := range errorChan {
-		cancel()
-		return jobs.StatusError(&jr, err)
+	for errorChan != nil || resChan != nil {
+		select {
+		case e, ok := <-errorChan:
+			if ok {
+				cancel()
+				return jobs.StatusError(&jr, e)
+			} else {
+				errorChan = nil
+			}
+		case r, ok := <-resChan:
+			if ok {
+				sr.synced += r.synced
+				sr.processed += r.processed
+				sr.noSyncNeeded += r.noSyncNeeded
+			} else {
+				resChan = nil
+			}
+		}
 	}
 
+	jr.Metadata = map[string]interface{}{"result": sr}
+	jr.Status = types.SUCCESS
 	jr.UpdatedAt = time.Now()
 	jr.Logs = append(jr.Logs, jobs.NewLog("sync images finished"))
 
@@ -113,6 +140,7 @@ func syncImgWorker(wp syncImgWorkerParam) {
 	currBatch := wp.offset
 	pageSize := int64(wp.batchSize100Ms)
 	maxbatch := wp.offset + wp.chunkSize
+	res := imgSyncResult{}
 	for currBatch < maxbatch {
 		select {
 		case <-wp.ctx.Done():
@@ -151,10 +179,17 @@ func syncImgWorker(wp syncImgWorkerParam) {
 			}
 
 			for _, r := range results {
-				fmt.Printf("todo: %v\n", r)
+				if r.OpenFoodFactImg == nil || r.OpenFoodFactImg.LastImageT != r.LastImageT {
+					fmt.Printf("todo: %v\n", r)
+				} else {
+					res.noSyncNeeded += 1
+				}
+				res.processed += 1
+
 			}
 			currBatch += pageSize
 			time.Sleep(time.Millisecond * sleepBetweenBatchesMs)
 		}
 	}
+	wp.resCh <- res
 }

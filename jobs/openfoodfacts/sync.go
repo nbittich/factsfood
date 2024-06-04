@@ -177,9 +177,7 @@ func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 
 	jr.Status = types.SUCCESS
 	if len(failedCsvLine) > 0 {
-		metadata := make(map[string]interface{}, 1)
-		metadata["failedCsvLines"] = failedCsvLine
-		jr.Metadata = metadata
+		jr.Metadata = map[string]interface{}{"failedCsvLine": failedCsvLine}
 	}
 
 	// delete csv
