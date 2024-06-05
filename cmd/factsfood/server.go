@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -30,6 +31,12 @@ func main() {
 
 	// static assets
 	e.Static("/assets", "assets")
+
+	// static ext
+	if _, err := os.Stat(config.StaticDirectory); os.IsNotExist(err) {
+		os.MkdirAll(config.StaticDirectory, 0755)
+	}
+	e.Static("/static", config.StaticDirectory)
 
 	// middleware
 	// e.Pre(middleware.AddTrailingSlash()) interfer with POST form

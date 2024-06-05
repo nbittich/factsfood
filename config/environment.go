@@ -35,6 +35,7 @@ var (
 	JWTIssuer                               = loadEnvOrDefault("JWT_ISSUER", "FactsFood")
 	JWTCookie                               = loadEnvOrDefault("JWT_COOKIE", "jwt")
 	TempDir                                 = loadEnvOrDefault("TMP_DIRECTORY", os.TempDir())
+	StaticDirectory                         = loadEnvOrDefault("STATIC_DIRECTORY", fmt.Sprint(os.TempDir(), "/factsfood/static"))
 	HTTPDownloadRateLimitInMegaBytes        = loadIntEnvOrDefault("HTTP_DOWNLOAD_RATE_LIMIT_IN_MEGA_BYTES", 6)         // 6mb per sec by default
 	HTTPGzippedDownloadRateLimitInMegaBytes = loadIntEnvOrDefault("HTTP_GZIPPED_DOWNLOAD_RATE_LIMIT_IN_MEGA_BYTES", 6) // 6mb per sec by default
 )

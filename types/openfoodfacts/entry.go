@@ -234,3 +234,11 @@ func (off OpenFoodFact) GetID() string {
 func (off *OpenFoodFact) SetID(id string) {
 	off.Code = id
 }
+
+func (off OpenFoodFactImg) GetID() string {
+	return off.ID
+}
+
+func (off *OpenFoodFactImg) SetID(id string) {
+	off.ID = id
+}

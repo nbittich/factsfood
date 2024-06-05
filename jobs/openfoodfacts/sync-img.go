@@ -1,12 +1,21 @@
 package openfoodfacts
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"mime"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/nbittich/factsfood/config"
 	"github.com/nbittich/factsfood/jobs"
 	"github.com/nbittich/factsfood/services/db"
 	"github.com/nbittich/factsfood/types"
@@ -140,6 +149,7 @@ func syncImgWorker(wp syncImgWorkerParam) {
 	currBatch := wp.offset
 	pageSize := int64(wp.batchSize100Ms)
 	maxbatch := wp.offset + wp.chunkSize
+	buf := make([]types.Identifiable, 0, wp.batchSize100Ms)
 	res := imgSyncResult{}
 	for currBatch < maxbatch {
 		select {
@@ -179,17 +189,102 @@ func syncImgWorker(wp syncImgWorkerParam) {
 			}
 
 			for _, r := range results {
-				if r.OpenFoodFactImg == nil || r.OpenFoodFactImg.LastImageT != r.LastImageT {
-					fmt.Printf("todo: %v\n", r)
+				if (r.OpenFoodFactImg == nil) || r.OpenFoodFactImg.LastImageT != r.LastImageT {
+					if r.LastImageT == 0 {
+						continue // fixme maybe delete the openfoodfact_img entirely in this case
+					}
+					offi := r.OpenFoodFactImg
+					if offi == nil {
+						offi = new(openfoodfacts.OpenFoodFactImg)
+					}
+					p, e := downloadImg(r.ImageURL, offi.ImageURL)
+					if e != nil {
+						log.Println("warning while downloading image:", e)
+					} else {
+						offi.ImageURL = p
+					}
+					p, e = downloadImg(r.ImageSmallURL, offi.ImageSmallURL)
+					if e != nil {
+						log.Println("warning while downloading image:", e)
+					} else {
+						offi.ImageSmallURL = p
+					}
+					p, e = downloadImg(r.ImageNutritionURL, offi.ImageNutritionURL)
+					if e != nil {
+						log.Println("warning while downloading image:", e)
+					} else {
+						offi.ImageNutritionURL = p
+					}
+					p, e = downloadImg(r.ImageNutritionSmallURL, offi.ImageNutritionSmallURL)
+					if e != nil {
+						log.Println("warning while downloading image:", e)
+					} else {
+						offi.ImageNutritionSmallURL = p
+					}
+					p, e = downloadImg(r.ImageIngredientsURL, offi.ImageIngredientsURL)
+					if e != nil {
+						log.Println("warning while downloading image:", e)
+					} else {
+						offi.ImageIngredientsURL = p
+					}
+					p, e = downloadImg(r.ImageIngredientsSmallURL, offi.ImageIngredientsSmallURL)
+					if e != nil {
+						log.Println("warning while downloading image:", e)
+					} else {
+						offi.ImageIngredientsSmallURL = p
+					}
+					offi.LastImageT = r.LastImageT
+					offi.OpenFoodFactID = r.Code
+					buf = append(buf, offi)
+					res.synced += 1
 				} else {
 					res.noSyncNeeded += 1
 				}
 				res.processed += 1
 
 			}
+			if len(buf) != 0 {
+				if err = db.InsertOrUpdateMany(wp.ctx, buf, imgCollection); err != nil {
+					wp.errCh <- err
+				}
+			}
+			buf = buf[:0]
 			currBatch += pageSize
 			time.Sleep(time.Millisecond * sleepBetweenBatchesMs)
 		}
 	}
 	wp.resCh <- res
+}
+
+func downloadImg(uri string, oldImageURI string) (string, error) {
+	if uri != "" {
+		u, err := url.Parse(uri)
+		if err != nil {
+			return "", err
+		}
+		p := strings.Split(u.Path, "/")
+		filename := ""
+		for i := len(p) - 1; i != 0; i-- {
+			ext := filepath.Ext(p[i])
+			ct := mime.TypeByExtension(ext)
+			if strings.HasPrefix(ct, "image/") {
+				filename = uuid.New().String() + ext
+				break
+			}
+		}
+		if filename == "" {
+			return "", fmt.Errorf("could not guess filename of %s", u)
+		}
+		fp := filepath.Join(config.StaticDirectory, filename)
+		_, err = jobs.DownloadFile(uri, fp, false)
+		if err != nil {
+			return "", err
+		}
+		oldImagePath := strings.ReplaceAll(oldImageURI, "/static", config.StaticDirectory)
+		if oldImagePath != "" {
+			os.Remove(oldImagePath)
+		}
+		return path.Join("/static", filename), err
+	}
+	return "", errors.New("uri is empty")
 }
