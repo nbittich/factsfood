@@ -162,13 +162,13 @@ func syncImgWorker(wp syncImgWorkerParam) {
 					{Key: "$lookup", Value: bson.D{
 						{Key: "from", Value: OpenFoodFactsImgCollection},
 						{Key: "localField", Value: "_id"},
-						{Key: "foreignField", Value: "openfoodfacts_id"},
-						{Key: "as", Value: "openfoodfact_img"},
+						{Key: "foreignField", Value: "openfoodfactsId"},
+						{Key: "as", Value: "openfoodfactImg"},
 					}},
 				},
 				{
 					{Key: "$unwind", Value: bson.D{
-						{Key: "path", Value: "$openfoodfact_img"},
+						{Key: "path", Value: "$openfoodfactImg"},
 						{Key: "preserveNullAndEmptyArrays", Value: true},
 					}},
 				},

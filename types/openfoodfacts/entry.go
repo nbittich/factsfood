@@ -4,11 +4,11 @@ import "github.com/nbittich/factsfood/types"
 
 type FactsFood struct {
 	OpenFoodFact    `bson:",inline"`
-	OpenFoodFactImg *OpenFoodFactImg `json:"openfoodfact_img,omitempty"`
+	OpenFoodFactImg *OpenFoodFactImg `json:"openfoodfactImg,omitempty"`
 }
 type OpenFoodFactImg struct {
 	ID                       string `json:"_id" bson:"_id"`
-	OpenFoodFactID           string `json:"openfoodfacts_id"`
+	OpenFoodFactID           string `json:"openfoodfactsId" bson:"openfoodfactsId"`
 	LastImageT               int    `json:"lastImageT,omitempty" bson:"lastImageT,omitempty"`
 	ImageURL                 string `json:"imageURL,omitempty" bson:"imageURL,omitempty"`
 	ImageSmallURL            string `json:"imageSmallURL,omitempty" bson:"imageSmallURL,omitempty"`

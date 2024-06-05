@@ -3,7 +3,7 @@ const execute = async (db, context = {}) => {
   const { uuid } = context;
   const job = {
     _id: uuid(),
-    cronExpression: "0 0 14 * * *",
+    cronExpression: "0 30 13 * * *",
     createdAt: new Date(),
     key: KEY,
     name: 'OpenFoodFacts: Daily Sync Images',
@@ -11,8 +11,8 @@ const execute = async (db, context = {}) => {
     running: false,
     disabled: false,
     params: {
-      parallelism: 4,
-      batchSize100Ms: 20, // 4*20*10 = 800req/sec
+      parallelism: 8,
+      batchSize100Ms: 50, // 8*50*10 = max 4000req/sec
     },
   };
 
