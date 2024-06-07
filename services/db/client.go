@@ -21,10 +21,11 @@ var (
 )
 
 type PageOptions struct {
-	PageNumber int64         `json:"pageNumber" form:"pageNumber" query:"pageNumber" validate:"required,min=1"`
-	PageSize   int64         `json:"pageSize"   form:"pageSize"   query:"pageSize"   validate:"required,min=1"`
-	Sort       string        `json:"sort"       form:"sort"       query:"sort" `
-	Direction  SortDirection `json:"direction"  form:"direction"  query:"direction"  validate:"oneof=0 1 -1"`
+	PageNumber int64                `json:"pageNumber" form:"pageNumber" query:"pageNumber" validate:"required,min=1"`
+	PageSize   int64                `json:"pageSize"   form:"pageSize"   query:"pageSize"   validate:"required,min=1"`
+	Sort       string               `json:"sort"       form:"sort"       query:"sort" `
+	Direction  SortDirection        `json:"direction"  form:"direction"  query:"direction"  validate:"oneof=0 1 -1"`
+	MongoOpts  *options.FindOptions `json:"mongoOpts,omitempty" form:"mongoOpts,omitempty" query:"mongoOpts,omitempty"`
 }
 
 type SortDirection int8
@@ -95,15 +96,20 @@ func Find[T types.HasID](ctx context.Context, filter interface{}, collection *mo
 	opts := &options.FindOptions{}
 	resultSize := 100
 	if page != nil {
-		if err := utils.ValidateStruct(page); err != nil {
-			return nil, err
-		}
-		skip := (page.PageNumber - 1) * page.PageSize
-		opts.SetSkip(skip)
-		opts.SetLimit(page.PageSize)
-		resultSize = int(page.PageSize)
-		if page.Sort != "" {
-			opts.SetSort(bson.M{page.Sort: page.Direction})
+		if page.MongoOpts != nil {
+			opts = page.MongoOpts
+		} else {
+			if err := utils.ValidateStruct(page); err != nil {
+				return nil, err
+			}
+			skip := (page.PageNumber - 1) * page.PageSize
+			opts.SetSkip(skip)
+			opts.SetLimit(page.PageSize)
+			resultSize = int(page.PageSize)
+			if page.Sort != "" {
+				opts.SetSort(bson.M{page.Sort: page.Direction})
+			}
+
 		}
 	}
 

@@ -8,7 +8,9 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/edsrzf/mmap-go"
@@ -20,6 +22,9 @@ import (
 	"github.com/nbittich/factsfood/types"
 	jobTypes "github.com/nbittich/factsfood/types/job"
 	offType "github.com/nbittich/factsfood/types/openfoodfacts"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/net/context"
 )
 
@@ -46,6 +51,7 @@ type syncWorkerParam struct {
 	wg             *sync.WaitGroup
 	errCh          chan error
 	warningCh      chan failedCSVLine
+	counter        *atomic.Uint64
 }
 
 type syncJobParam struct {
@@ -55,6 +61,32 @@ type syncJobParam struct {
 	Gzipped        bool   `mapstructure:"gzip"`
 	Parallelism    *int64 `mapstructure:"parallelism"`
 	BatchSize100Ms *uint  `mapstructure:"batchSize100Ms"`
+}
+
+// creates openfoodfacts collection and seq index
+func init() {
+	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
+	defer cancel()
+	collections, err := db.DB.ListCollectionNames(ctx, &bson.D{}, options.ListCollections().SetNameOnly(true))
+	if err != nil {
+		panic(fmt.Sprint("could not list collections", err))
+	}
+	if slices.Contains(collections, OpenFoodFactsCollection) {
+		log.Println(OpenFoodFactsCollection, "collection already exists")
+		return
+	}
+	if err = db.DB.CreateCollection(ctx, OpenFoodFactsCollection, options.CreateCollection()); err != nil {
+		panic(fmt.Sprint("could not create collection", err))
+	}
+	indexModel := mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "seq", Value: 1}, // 1 for ascending, -1 for descending
+		},
+		Options: options.Index().SetUnique(true),
+	}
+	if _, err = offCollection.Indexes().CreateOne(ctx, indexModel); err != nil {
+		panic(fmt.Sprint("could not create index", err))
+	}
 }
 
 func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
@@ -120,6 +152,7 @@ func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 
 	log.Println("spawning goroutine(s)")
 
+	var counter atomic.Uint64
 	for offset < fileLen {
 		end := offset + maxChunkSize
 		if end > fileLen {
@@ -138,6 +171,7 @@ func (is Sync) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 			wg:             &wg,
 			errCh:          errorChan,
 			warningCh:      warningChan,
+			counter:        &counter,
 		})
 		offset = currentLastNewLine
 	}
@@ -223,7 +257,10 @@ func syncWorker(wp syncWorkerParam) {
 						wp.errCh <- fmt.Errorf("len of entry != 1: %d. %v", len(out), out)
 						return
 					}
-					batch = append(batch, out[0])
+
+					o := out[0]
+					o.Seq = wp.counter.Add(1)
+					batch = append(batch, o)
 
 				}
 				// clear buffers

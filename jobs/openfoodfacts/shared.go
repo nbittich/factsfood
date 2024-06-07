@@ -3,6 +3,7 @@ package openfoodfacts
 import "github.com/nbittich/factsfood/services/db"
 
 const (
+	OpenFoodFactsView          = "off_view"
 	OpenFoodFactsImgCollection = "openfoodfacts_img"
 	OpenFoodFactsCollection    = "openfoodfacts"
 	InitialCapLogs             = 10  // Logs slice initial capacity

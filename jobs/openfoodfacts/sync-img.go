@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"github.com/nbittich/factsfood/types/openfoodfacts"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/net/context"
 )
 
@@ -54,7 +56,65 @@ type imgSyncResult struct {
 	noSyncNeeded int64
 }
 
-var imgCollection = db.GetCollection(OpenFoodFactsImgCollection)
+var (
+	imgCollection = db.GetCollection(OpenFoodFactsImgCollection)
+	offView       = db.GetCollection(OpenFoodFactsView)
+)
+
+// create the view
+func init() {
+	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
+	defer cancel()
+	collections, err := db.DB.ListCollectionNames(ctx, &bson.D{}, options.ListCollections().SetNameOnly(true))
+	if err != nil {
+		panic(fmt.Sprint("could not list collections", err))
+	}
+	if slices.Contains(collections, OpenFoodFactsView) {
+		log.Println(OpenFoodFactsView, "view already exists")
+		return
+	}
+	if !slices.Contains(collections, OpenFoodFactsImgCollection) {
+		err := db.DB.CreateCollection(ctx, OpenFoodFactsImgCollection, options.CreateCollection())
+		if err != nil {
+			panic(fmt.Sprint("could not create collection", err))
+		}
+		indexModel := mongo.IndexModel{
+			Keys: bson.D{
+				{Key: "openfoodfactsId", Value: 1}, // 1 for ascending, -1 for descending
+			},
+			Options: options.Index().SetUnique(true),
+		}
+		if _, err = imgCollection.Indexes().CreateOne(ctx, indexModel); err != nil {
+			panic(fmt.Sprint("could not create index", err))
+		}
+	}
+	pipeline := mongo.Pipeline{
+		{
+			{Key: "$sort", Value: bson.D{
+				{Key: "seq", Value: 1},
+			}},
+		},
+		{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: OpenFoodFactsImgCollection},
+				{Key: "localField", Value: "_id"},
+				{Key: "foreignField", Value: "openfoodfactsId"},
+				{Key: "as", Value: "openfoodfactImg"},
+			}},
+		},
+		{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$openfoodfactImg"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+	}
+	if err := db.DB.CreateView(ctx, OpenFoodFactsView,
+		OpenFoodFactsCollection,
+		pipeline, options.CreateView()); err != nil {
+		panic(fmt.Sprint("could not create view", err))
+	}
+}
 
 func (sij SyncImg) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	jr := jobTypes.JobResult{
@@ -157,32 +217,11 @@ func syncImgWorker(wp syncImgWorkerParam) {
 			log.Println("Goroutine cancelled")
 			return
 		default:
-			pipeline := mongo.Pipeline{
-				{
-					{Key: "$lookup", Value: bson.D{
-						{Key: "from", Value: OpenFoodFactsImgCollection},
-						{Key: "localField", Value: "_id"},
-						{Key: "foreignField", Value: "openfoodfactsId"},
-						{Key: "as", Value: "openfoodfactImg"},
-					}},
-				},
-				{
-					{Key: "$unwind", Value: bson.D{
-						{Key: "path", Value: "$openfoodfactImg"},
-						{Key: "preserveNullAndEmptyArrays", Value: true},
-					}},
-				},
-				{{Key: "$skip", Value: currBatch}},
-				{{Key: "$limit", Value: pageSize}},
-			}
-
-			cursor, err := offCollection.Aggregate(wp.ctx, pipeline)
-			if err != nil {
-				wp.errCh <- err
-				return
-			}
-
-			results, err := db.CursorToSlice[openfoodfacts.FactsFood](wp.ctx, cursor, int(pageSize))
+			results, err := db.Find[openfoodfacts.FactsFood](wp.ctx, &bson.D{
+				{Key: "seq", Value: bson.D{{Key: "$gte", Value: currBatch + 1}}},
+			}, offView, &db.PageOptions{
+				MongoOpts: options.Find().SetLimit(pageSize),
+			})
 			if err != nil {
 				wp.errCh <- err
 				return

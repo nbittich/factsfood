@@ -225,6 +225,7 @@ type OpenFoodFact struct {
 	Sulphate100G                                    int               `json:"sulphate100G,omitempty" bson:"sulphate100G,omitempty"`
 	Nitrate100G                                     int               `json:"nitrate100G,omitempty" bson:"nitrate100G,omitempty"`
 	Acidity100G                                     int               `json:"acidity100G,omitempty" bson:"acidity100G,omitempty"`
+	Seq                                             uint64            `json:"seq" bson:"seq" csv:"-"`
 }
 
 func (off OpenFoodFact) GetID() string {
