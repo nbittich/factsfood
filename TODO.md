@@ -1,1 +1,3 @@
-- replace all Println by logging
+- there is a problem with off sync and atomic counter
+- next sync, if there are deleted entries, we may have a problem with uniqueness of the seq
+- solution is during sync, sync with a temp collection, then rename it with the main one

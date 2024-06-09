@@ -15,13 +15,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var DB *mongo.Client
+var (
+	mongoClient *mongo.Client
+	DB          *mongo.Database
+)
 
 type PageOptions struct {
-	PageNumber int64         `json:"pageNumber" form:"pageNumber" query:"pageNumber" validate:"required,min=1"`
-	PageSize   int64         `json:"pageSize"   form:"pageSize"   query:"pageSize"   validate:"required,min=1"`
-	Sort       string        `json:"sort"       form:"sort"       query:"sort" `
-	Direction  SortDirection `json:"direction"  form:"direction"  query:"direction"  validate:"oneof=0 1 -1"`
+	PageNumber int64                `json:"pageNumber" form:"pageNumber" query:"pageNumber" validate:"required,min=1"`
+	PageSize   int64                `json:"pageSize"   form:"pageSize"   query:"pageSize"   validate:"required,min=1"`
+	Sort       string               `json:"sort"       form:"sort"       query:"sort" `
+	Direction  SortDirection        `json:"direction"  form:"direction"  query:"direction"  validate:"oneof=0 1 -1"`
+	MongoOpts  *options.FindOptions `json:"mongoOpts,omitempty" form:"mongoOpts,omitempty" query:"mongoOpts,omitempty"`
 }
 
 type SortDirection int8
@@ -44,20 +48,20 @@ func init() {
 		panic(fmt.Sprintf("could not ping mongo:\n %s", err.Error()))
 	}
 	log.Printf("connected!")
-	DB = client
+	mongoClient = client
+	DB = mongoClient.Database(config.MongoDBName, &options.DatabaseOptions{})
 }
 
 func Disconnect() {
 	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
 	defer cancel()
-	if err := DB.Disconnect(ctx); err != nil {
+	if err := mongoClient.Disconnect(ctx); err != nil {
 		panic(err)
 	}
 }
 
 func GetCollection(collectionName string) *mongo.Collection {
-	db := DB.Database(config.MongoDBName, &options.DatabaseOptions{})
-	return db.Collection(collectionName, &options.CollectionOptions{})
+	return DB.Collection(collectionName, &options.CollectionOptions{})
 }
 
 func FilterByID(id string) primitive.M {
@@ -92,15 +96,20 @@ func Find[T types.HasID](ctx context.Context, filter interface{}, collection *mo
 	opts := &options.FindOptions{}
 	resultSize := 100
 	if page != nil {
-		if err := utils.ValidateStruct(page); err != nil {
-			return nil, err
-		}
-		skip := (page.PageNumber - 1) * page.PageSize
-		opts.SetSkip(skip)
-		opts.SetLimit(page.PageSize)
-		resultSize = int(page.PageSize)
-		if page.Sort != "" {
-			opts.SetSort(bson.M{page.Sort: page.Direction})
+		if page.MongoOpts != nil {
+			opts = page.MongoOpts
+		} else {
+			if err := utils.ValidateStruct(page); err != nil {
+				return nil, err
+			}
+			skip := (page.PageNumber - 1) * page.PageSize
+			opts.SetSkip(skip)
+			opts.SetLimit(page.PageSize)
+			resultSize = int(page.PageSize)
+			if page.Sort != "" {
+				opts.SetSort(bson.M{page.Sort: page.Direction})
+			}
+
 		}
 	}
 

@@ -9,9 +9,9 @@ import (
 
 type UserActivationURL struct {
 	ID        string    `bson:"_id" json:"_id"`
-	UserID    string    `json:"userId"`
-	Hash      string    `json:"hash"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	UserID    string    `json:"userId" bson:"userId"`
+	Hash      string    `json:"hash" bson:"hash"`
+	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 }
 
 type NewUserForm struct {

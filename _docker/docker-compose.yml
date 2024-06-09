@@ -7,6 +7,7 @@ services:
     restart: always
     volumes:
       - ./data/db:/data/db
+    command: --wiredTigerCacheSizeGB 0.25
   ####### Migration #######
   migrations:
     image: nbittich/mongodb-migration:v0.1.1

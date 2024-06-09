@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"github.com/nbittich/factsfood/types/openfoodfacts"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/net/context"
 )
 
@@ -54,7 +56,63 @@ type imgSyncResult struct {
 	noSyncNeeded int64
 }
 
-var imgCollection = db.GetCollection(OpenFoodFactsImgCollection)
+var (
+	imgCollection = db.GetCollection(OpenFoodFactsImgCollection)
+	offView       = db.GetCollection(OpenFoodFactsView)
+)
+
+// create the view
+func init() {
+	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
+	defer cancel()
+	collections, err := db.DB.ListCollectionNames(ctx, &bson.D{}, options.ListCollections().SetNameOnly(true))
+	if err != nil {
+		panic(fmt.Sprint("could not list collections", err))
+	}
+	if slices.Contains(collections, OpenFoodFactsView) {
+		log.Println(OpenFoodFactsView, "view already exists")
+		return
+	}
+	if !slices.Contains(collections, OpenFoodFactsImgCollection) {
+		err := db.DB.CreateCollection(ctx, OpenFoodFactsImgCollection, options.CreateCollection())
+		if err != nil {
+			panic(fmt.Sprint("could not create collection", err))
+		}
+		indexModel := mongo.IndexModel{
+			Keys: bson.D{
+				{Key: "openfoodfactsId", Value: 1}, // 1 for ascending, -1 for descending
+			},
+			Options: options.Index().SetUnique(true),
+		}
+		if _, err = imgCollection.Indexes().CreateOne(ctx, indexModel); err != nil {
+			panic(fmt.Sprint("could not create index", err))
+		}
+	}
+	pipeline := mongo.Pipeline{
+		{
+			{Key: "$sort", Value: bson.D{
+				{Key: "seq", Value: 1},
+			}},
+		},
+		{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: OpenFoodFactsImgCollection},
+				{Key: "localField", Value: "_id"},
+				{Key: "foreignField", Value: "openfoodfactsId"},
+				{Key: "as", Value: "openfoodfactImg"},
+			}},
+		},
+		{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$openfoodfactImg"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+	}
+	if err := db.DB.CreateView(ctx, OpenFoodFactsView, OpenFoodFactsCollection, pipeline, options.CreateView()); err != nil {
+		panic(fmt.Sprint("could not create view", err))
+	}
+}
 
 func (sij SyncImg) Process(job *jobTypes.Job) (*jobTypes.JobResult, error) {
 	jr := jobTypes.JobResult{
@@ -151,97 +209,89 @@ func syncImgWorker(wp syncImgWorkerParam) {
 	maxbatch := wp.offset + wp.chunkSize
 	buf := make([]types.Identifiable, 0, wp.batchSize100Ms)
 	res := imgSyncResult{}
+
 	for currBatch < maxbatch {
 		select {
 		case <-wp.ctx.Done():
 			log.Println("Goroutine cancelled")
 			return
 		default:
-			pipeline := mongo.Pipeline{
-				{
-					{Key: "$lookup", Value: bson.D{
-						{Key: "from", Value: OpenFoodFactsImgCollection},
-						{Key: "localField", Value: "_id"},
-						{Key: "foreignField", Value: "openfoodfacts_id"},
-						{Key: "as", Value: "openfoodfact_img"},
-					}},
-				},
-				{
-					{Key: "$unwind", Value: bson.D{
-						{Key: "path", Value: "$openfoodfact_img"},
-						{Key: "preserveNullAndEmptyArrays", Value: true},
-					}},
-				},
-				{{Key: "$skip", Value: currBatch}},
-				{{Key: "$limit", Value: pageSize}},
-			}
-
-			cursor, err := offCollection.Aggregate(wp.ctx, pipeline)
-			if err != nil {
-				wp.errCh <- err
-				return
-			}
-
-			results, err := db.CursorToSlice[openfoodfacts.FactsFood](wp.ctx, cursor, int(pageSize))
+			var internWg sync.WaitGroup
+			internCh := make(chan types.Identifiable, 1)
+			results, err := db.Find[openfoodfacts.FactsFood](wp.ctx, &bson.D{
+				{Key: "seq", Value: bson.D{{Key: "$gte", Value: currBatch + 1}}},
+			}, offView, &db.PageOptions{
+				MongoOpts: options.Find().SetLimit(pageSize),
+			})
 			if err != nil {
 				wp.errCh <- err
 				return
 			}
 
 			for _, r := range results {
-				if (r.OpenFoodFactImg == nil) || r.OpenFoodFactImg.LastImageT != r.LastImageT {
-					if r.LastImageT == 0 {
-						continue // fixme maybe delete the openfoodfact_img entirely in this case
-					}
-					offi := r.OpenFoodFactImg
-					if offi == nil {
-						offi = new(openfoodfacts.OpenFoodFactImg)
-					}
-					p, e := downloadImg(r.ImageURL, offi.ImageURL)
-					if e != nil {
-						log.Println("warning while downloading image:", e)
+				internWg.Add(1)
+				go func(r openfoodfacts.FactsFood) {
+					defer internWg.Done()
+					if (r.OpenFoodFactImg == nil) || r.OpenFoodFactImg.LastImageT != r.LastImageT {
+						if r.LastImageT == 0 {
+							return // fixme maybe delete the openfoodfact_img entirely in this case
+						}
+						offi := r.OpenFoodFactImg
+						if offi == nil {
+							offi = new(openfoodfacts.OpenFoodFactImg)
+						}
+						p, e := downloadImg(r.ImageURL, offi.ImageURL)
+						if e != nil {
+							log.Println("warning while downloading image:", e)
+						} else {
+							offi.ImageURL = p
+						}
+						p, e = downloadImg(r.ImageSmallURL, offi.ImageSmallURL)
+						if e != nil {
+							log.Println("warning while downloading image:", e)
+						} else {
+							offi.ImageSmallURL = p
+						}
+						p, e = downloadImg(r.ImageNutritionURL, offi.ImageNutritionURL)
+						if e != nil {
+							log.Println("warning while downloading image:", e)
+						} else {
+							offi.ImageNutritionURL = p
+						}
+						p, e = downloadImg(r.ImageNutritionSmallURL, offi.ImageNutritionSmallURL)
+						if e != nil {
+							log.Println("warning while downloading image:", e)
+						} else {
+							offi.ImageNutritionSmallURL = p
+						}
+						p, e = downloadImg(r.ImageIngredientsURL, offi.ImageIngredientsURL)
+						if e != nil {
+							log.Println("warning while downloading image:", e)
+						} else {
+							offi.ImageIngredientsURL = p
+						}
+						p, e = downloadImg(r.ImageIngredientsSmallURL, offi.ImageIngredientsSmallURL)
+						if e != nil {
+							log.Println("warning while downloading image:", e)
+						} else {
+							offi.ImageIngredientsSmallURL = p
+						}
+						offi.LastImageT = r.LastImageT
+						offi.OpenFoodFactID = r.Code
+						internCh <- offi
+						res.synced += 1
 					} else {
-						offi.ImageURL = p
+						res.noSyncNeeded += 1
 					}
-					p, e = downloadImg(r.ImageSmallURL, offi.ImageSmallURL)
-					if e != nil {
-						log.Println("warning while downloading image:", e)
-					} else {
-						offi.ImageSmallURL = p
-					}
-					p, e = downloadImg(r.ImageNutritionURL, offi.ImageNutritionURL)
-					if e != nil {
-						log.Println("warning while downloading image:", e)
-					} else {
-						offi.ImageNutritionURL = p
-					}
-					p, e = downloadImg(r.ImageNutritionSmallURL, offi.ImageNutritionSmallURL)
-					if e != nil {
-						log.Println("warning while downloading image:", e)
-					} else {
-						offi.ImageNutritionSmallURL = p
-					}
-					p, e = downloadImg(r.ImageIngredientsURL, offi.ImageIngredientsURL)
-					if e != nil {
-						log.Println("warning while downloading image:", e)
-					} else {
-						offi.ImageIngredientsURL = p
-					}
-					p, e = downloadImg(r.ImageIngredientsSmallURL, offi.ImageIngredientsSmallURL)
-					if e != nil {
-						log.Println("warning while downloading image:", e)
-					} else {
-						offi.ImageIngredientsSmallURL = p
-					}
-					offi.LastImageT = r.LastImageT
-					offi.OpenFoodFactID = r.Code
-					buf = append(buf, offi)
-					res.synced += 1
-				} else {
-					res.noSyncNeeded += 1
-				}
-				res.processed += 1
-
+					res.processed += 1
+				}(r)
+			}
+			go func() {
+				internWg.Wait()
+				close(internCh)
+			}()
+			for ident := range internCh {
+				buf = append(buf, ident)
 			}
 			if len(buf) != 0 {
 				if err = db.InsertOrUpdateMany(wp.ctx, buf, imgCollection); err != nil {
@@ -253,6 +303,7 @@ func syncImgWorker(wp syncImgWorkerParam) {
 			time.Sleep(time.Millisecond * sleepBetweenBatchesMs)
 		}
 	}
+
 	wp.resCh <- res
 }
 
